@@ -1,0 +1,35 @@
+export interface Match {
+  id: string;
+  team_a: string;
+  team_b: string;
+  team_a_logo?: string;
+  team_b_logo?: string;
+  match_time: string;
+  venue?: string;
+  status: "upcoming" | "live" | "completed";
+  sport: string;
+  ai_prediction?: string;
+  ai_confidence?: number;
+  ai_reasoning?: string;
+  winner?: string;
+}
+
+export interface Prediction {
+  id: string;
+  user_id: string;
+  match_id: string;
+  prediction: string;
+  confidence_score?: number;
+  ai_reasoning?: string;
+  created_at: string;
+}
+
+export interface Profile {
+  id: string;
+  screen_name?: string;
+  avatar_url?: string;
+  is_admin?: boolean;
+  points?: number;
+  matches_predicted: number;
+  accuracy: number;
+}

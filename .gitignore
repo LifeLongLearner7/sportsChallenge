@@ -1,0 +1,52 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+error.log*
+.pnpm-debug.log*
+
+# local env files
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# scratch scripts and research tools
+brute_cols.mjs
+debug_prediction.mjs
+get_cols.mjs
+inspect_db.mjs
+inspect_predictions.mjs
+probe_columns.mjs
+probe_matches.mjs
+seed.mjs
+seed_v*.mjs
+test_db.mjs
+verify_fix.mjs
+!seed_full_ipl_2026.mjs

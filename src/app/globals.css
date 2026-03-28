@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #0a0e14;
+  --color-surface: #0a0e14;
+  --color-surface-container-low: #0f141a;
+  --color-surface-container-high: #1b2028;
+  --color-surface-container-highest: #20262f;
+  
+  --color-primary: #81ecff;
+  --color-primary-dim: #00d4ec;
+  --color-secondary: #ff6b98;
+  --color-tertiary: #ffe792;
+  
+  --color-on-surface: #f1f3fc;
+  --color-on-surface-variant: #a8abb3;
+  
+  --font-headline: "Space Grotesk", sans-serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+
+  --radius-default: 2px;
+  --radius-lg: 4px;
+  --radius-xl: 8px;
+  --radius-full: 12px;
+}
+
+:root {
+  --background: #0a0e14;
+  --foreground: #f1f3fc;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+.glass-panel {
+  background: rgba(15, 20, 26, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.hero-glow {
+  background: radial-gradient(circle at center, rgba(129, 236, 255, 0.15) 0%, rgba(10, 14, 20, 0) 70%);
+}
+
+.hex-clip {
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  animation: marquee 30s linear infinite;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
