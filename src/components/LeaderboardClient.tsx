@@ -19,8 +19,8 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
   const [gold, silver, bronze] = rankers.slice(0, 3);
   const others = rankers.slice(3);
 
-  const getAvatar = (id: string | null) => {
-    return ALL_IDENTITIES.find(a => a.id === id) || ALL_IDENTITIES[0];
+  const getAvatar = (id: string | null | undefined) => {
+    return ALL_IDENTITIES.find(a => id && a.id === id) || ALL_IDENTITIES[0];
   };
 
   return (
