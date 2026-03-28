@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import AvatarGallery from "@/components/AvatarGallery";
-import { Save, User, Fingerprint, ShieldCheck } from "lucide-react";
+import { Save, User, Fingerprint, ShieldCheck, Cpu, Flag } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Profile } from "@/types";
 import { updateProfile } from "@/lib/data-actions";
+import { AVATARS, FACTIONS } from "@/lib/constants";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -18,9 +19,10 @@ interface SettingsClientProps {
 
 export default function SettingsClient({ profile }: SettingsClientProps) {
   const [screenName, setScreenName] = useState(profile?.screen_name || "");
-  const [selectedAvatar, setSelectedAvatar] = useState(profile?.avatar_url || "vanguard");
+  const [selectedAvatar, setSelectedAvatar] = useState(profile?.avatar_url || "neural_ace");
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState<"persona" | "faction">("persona");
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -107,24 +109,70 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
           </div>
         </section>
 
-        {/* Avatar Selection */}
+        {/* Avatar & Faction Selection */}
         <section className="glass-panel p-8 rounded-3xl border-secondary/20 flex flex-col gap-8 border-white/5">
-           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
-                <User size={20} />
-             </div>
-             <h2 className="text-sm font-black text-white uppercase tracking-wider">Digital Persona</h2>
+           <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
+                    <User size={20} />
+                </div>
+                <h2 className="text-sm font-black text-white uppercase tracking-wider">Digital persona</h2>
+              </div>
+              
+              <div className="flex bg-black/40 p-1 rounded-lg border border-white/5">
+                <button 
+                  onClick={() => setActiveTab("persona")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all",
+                    activeTab === "persona" ? "bg-secondary text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+                  )}
+                >
+                  Strategist
+                </button>
+                <button 
+                  onClick={() => setActiveTab("faction")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all",
+                    activeTab === "faction" ? "bg-secondary text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+                  )}
+                >
+                  Faction
+                </button>
+              </div>
+           </div>
+
+          <div className="min-h-[340px]">
+            {activeTab === "persona" ? (
+              <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="flex items-center gap-2 text-secondary">
+                  <Cpu size={14} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Neural Nodes</span>
+                </div>
+                <AvatarGallery 
+                  currentId={selectedAvatar} 
+                  onSelect={setSelectedAvatar}
+                  options={AVATARS}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-left-4 duration-300">
+                <div className="flex items-center gap-2 text-primary">
+                  <Flag size={14} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Faction Alignment</span>
+                </div>
+                <AvatarGallery 
+                  currentId={selectedAvatar} 
+                  onSelect={setSelectedAvatar}
+                  options={FACTIONS}
+                />
+              </div>
+            )}
           </div>
 
-          <AvatarGallery 
-            currentId={selectedAvatar} 
-            onSelect={setSelectedAvatar} 
-          />
-
           <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-             <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 italic text-center">Neural Sync Capability</div>
+             <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 italic text-center">Identity synchronization grade</div>
              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                <div className="w-[85%] h-full bg-secondary shadow-[0_0_10px_rgba(255,107,152,0.5)]"></div>
+                <div className="w-[92%] h-full bg-secondary shadow-[0_0_10px_rgba(255,107,152,0.5)]"></div>
              </div>
           </div>
         </section>

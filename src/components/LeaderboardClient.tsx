@@ -3,6 +3,7 @@
 import Navbar from "@/components/Navbar";
 import { Trophy, TrendingUp } from "lucide-react";
 import { Profile } from "@/types";
+import { ALL_IDENTITIES } from "@/lib/constants";
 
 interface LeaderboardClientProps {
   rankers: Profile[];
@@ -18,6 +19,10 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
   const [gold, silver, bronze] = rankers.slice(0, 3);
   const others = rankers.slice(3);
 
+  const getAvatar = (id: string | null) => {
+    return ALL_IDENTITIES.find(a => a.id === id) || ALL_IDENTITIES[0];
+  };
+
   return (
     <main className="min-h-screen pt-32 pb-20 bg-background relative overflow-hidden">
       <Navbar isAdmin={currentUserProfile?.is_admin} />
@@ -31,7 +36,7 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
           <h1 className="font-headline text-5xl md:text-7xl font-black uppercase tracking-tighter italic">
             STRATEGIST <span className="text-primary">LEADERBOARD</span>
           </h1>
-          <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-xs">GLOBAL COMPETITIVE STANDINGS • EPOCH 07</p>
+          <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-xs">GLOBAL COMPETITIVE STANDINGS • EPOCH 01</p>
         </div>
 
         {/* Top 3 Podium */}
@@ -40,12 +45,16 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
           {silver && (
             <div className="order-2 md:order-1 flex flex-col items-center gap-6 group">
               <div className="relative">
-                <div className="w-24 h-24 hex-clip bg-white/5 border-2 border-slate-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(148,163,184,0.3)]">
-                   {silver.avatar_url ? (
-                      <img src={silver.avatar_url} className="w-full h-full object-cover" alt="User" />
-                   ) : (
-                      <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold">U2</div>
-                   )}
+                <div className="w-24 h-24 hex-clip bg-white/5 border-2 border-slate-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(148,163,184,0.3)] flex items-center justify-center">
+                   {(() => {
+                      const avatar = getAvatar(silver.avatar_url);
+                      if (avatar.path) return <img src={avatar.path} className="w-full h-full object-cover" alt="User" />;
+                      if (avatar.icon) {
+                        const Icon = avatar.icon;
+                        return <Icon size={32} className="text-slate-400" />;
+                      }
+                      return null;
+                   })()}
                 </div>
                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-slate-400 text-slate-950 font-black px-3 py-0.5 text-xs hex-clip">02</div>
               </div>
@@ -63,12 +72,16 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
                  {/* Halo effect for gold */}
                 <div className="absolute inset-0 bg-tertiary/20 rounded-full blur-3xl animate-pulse"></div>
                 
-                <div className="w-32 h-32 hex-clip bg-white/5 border-2 border-tertiary p-1.5 group-hover:scale-105 transition-all duration-700 overflow-hidden shadow-[0_0_40px_rgba(255,231,146,0.4)] relative z-10">
-                   {gold.avatar_url ? (
-                      <img src={gold.avatar_url} className="w-full h-full object-cover" alt="User" />
-                   ) : (
-                      <div className="w-full h-full bg-slate-800 flex items-center justify-center text-tertiary font-bold">U1</div>
-                   )}
+                <div className="w-32 h-32 hex-clip bg-white/5 border-2 border-tertiary p-1.5 group-hover:scale-105 transition-all duration-700 overflow-hidden shadow-[0_0_40px_rgba(255,231,146,0.4)] relative z-10 flex items-center justify-center">
+                   {(() => {
+                      const avatar = getAvatar(gold.avatar_url);
+                      if (avatar.path) return <img src={avatar.path} className="w-full h-full object-cover" alt="User" />;
+                      if (avatar.icon) {
+                        const Icon = avatar.icon;
+                        return <Icon size={44} className="text-tertiary" />;
+                      }
+                      return null;
+                   })()}
                 </div>
                 <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-tertiary text-slate-950 font-black px-5 py-1 text-sm hex-clip z-20">01</div>
                 <Trophy className="absolute -top-10 left-1/2 -translate-x-1/2 text-tertiary drop-shadow-[0_0_15px_rgba(255,231,146,0.8)]" size={40} />
@@ -84,12 +97,16 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
           {bronze && (
             <div className="order-3 md:order-3 flex flex-col items-center gap-6 group">
               <div className="relative">
-                <div className="w-24 h-24 hex-clip bg-white/5 border-2 border-orange-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(251,146,60,0.3)]">
-                   {bronze.avatar_url ? (
-                      <img src={bronze.avatar_url} className="w-full h-full object-cover" alt="User" />
-                   ) : (
-                      <div className="w-full h-full bg-slate-800 flex items-center justify-center text-orange-400 font-bold">U3</div>
-                   )}
+                <div className="w-24 h-24 hex-clip bg-white/5 border-2 border-orange-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(251,146,60,0.3)] flex items-center justify-center">
+                   {(() => {
+                      const avatar = getAvatar(bronze.avatar_url);
+                      if (avatar.path) return <img src={avatar.path} className="w-full h-full object-cover" alt="User" />;
+                      if (avatar.icon) {
+                        const Icon = avatar.icon;
+                        return <Icon size={32} className="text-orange-400" />;
+                      }
+                      return null;
+                   })()}
                 </div>
                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-orange-400 text-slate-950 font-black px-3 py-0.5 text-xs hex-clip">03</div>
               </div>
@@ -119,11 +136,15 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
                 </div>
                 <div className="col-span-4 flex items-center gap-5">
                   <div className="w-12 h-12 hex-clip bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shadow-inner">
-                    {ranker.avatar_url ? (
-                       <img src={ranker.avatar_url} className="w-full h-full object-cover" alt="User" />
-                    ) : (
-                       <TrendingUp size={22} className="text-slate-600" />
-                    )}
+                    {(() => {
+                      const avatar = getAvatar(ranker.avatar_url);
+                      if (avatar.path) return <img src={avatar.path} className="w-full h-full object-cover" alt="User" />;
+                      if (avatar.icon) {
+                        const Icon = avatar.icon;
+                        return <Icon size={22} className="text-slate-600" />;
+                      }
+                      return <TrendingUp size={22} className="text-slate-600" />;
+                    })()}
                   </div>
                   <div>
                     <div className="font-black text-white uppercase text-sm tracking-tight mb-0.5 group-hover:text-primary transition-colors">

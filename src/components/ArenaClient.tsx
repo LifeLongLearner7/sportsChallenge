@@ -277,27 +277,40 @@ export default function ArenaClient({
                 messages.map((msg) => {
                   const isAdminMsg = msg.profiles?.is_admin;
                   const isOwn = msg.user_id === profile?.id;
-                  const msgAvatar = AVATARS.find((a: any) => a.id === msg.profiles?.avatar_url) || AVATARS[0];
-                  const MsgAvatarIcon = msgAvatar.icon;
+                   const msgAvatar = AVATARS.find((a: any) => a.id === msg.profiles?.avatar_url) || AVATARS[0];
 
-                  return (
-                    <div key={msg.id} className={cn("flex flex-col gap-2 group max-w-[85%]", isOwn ? "self-end items-end" : "self-start items-start")}>
-                        <div className="flex items-center gap-2">
-                           {!isOwn && (
-                             <div className={cn("w-6 h-6 rounded-full flex items-center justify-center hex-clip", msgAvatar.bg, "border border-white/10")}>
-                                <MsgAvatarIcon size={12} className={msgAvatar.color} />
-                             </div>
-                           )}
-                           <span className={cn("text-[9px] font-black uppercase tracking-wider", isAdminMsg ? "text-secondary" : "text-slate-400")}>
-                              {msg.profiles?.screen_name || "Unknown_Strategist"}
-                              {isAdminMsg && " [MOD]"}
-                           </span>
-                           {isOwn && (
-                             <div className={cn("w-6 h-6 rounded-full flex items-center justify-center hex-clip", msgAvatar.bg, "border border-white/10")}>
-                                <MsgAvatarIcon size={12} className={msgAvatar.color} />
-                             </div>
-                           )}
-                        </div>
+                   return (
+                     <div key={msg.id} className={cn("flex flex-col gap-2 group max-w-[85%]", isOwn ? "self-end items-end" : "self-start items-start")}>
+                         <div className="flex items-center gap-2">
+                            {!isOwn && (
+                              <div className={cn("w-6 h-6 rounded-full flex items-center justify-center hex-clip overflow-hidden relative", !msgAvatar.path && msgAvatar.bg, "border border-white/10")}>
+                                 {msgAvatar.path ? (
+                                    <img src={msgAvatar.path} className="w-full h-full object-cover" alt="User" />
+                                 ) : msgAvatar.icon ? (
+                                    (() => {
+                                      const Icon = msgAvatar.icon;
+                                      return <Icon size={12} className={msgAvatar.color} />;
+                                    })()
+                                 ) : null}
+                              </div>
+                            )}
+                            <span className={cn("text-[9px] font-black uppercase tracking-wider", isAdminMsg ? "text-secondary" : "text-slate-400")}>
+                               {msg.profiles?.screen_name || "Unknown_Strategist"}
+                               {isAdminMsg && " [MOD]"}
+                            </span>
+                            {isOwn && (
+                              <div className={cn("w-6 h-6 rounded-full flex items-center justify-center hex-clip overflow-hidden relative", !msgAvatar.path && msgAvatar.bg, "border border-white/10")}>
+                                 {msgAvatar.path ? (
+                                    <img src={msgAvatar.path} className="w-full h-full object-cover" alt="User" />
+                                 ) : msgAvatar.icon ? (
+                                    (() => {
+                                      const Icon = msgAvatar.icon;
+                                      return <Icon size={12} className={msgAvatar.color} />;
+                                    })()
+                                 ) : null}
+                              </div>
+                            )}
+                         </div>
                         
                         <div className="relative group/msg">
                            <div className={cn(

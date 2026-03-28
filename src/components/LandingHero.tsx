@@ -12,7 +12,7 @@ export default function LandingHero() {
       <div className="flex flex-col gap-4">
         <span className="inline-flex items-center gap-2 bg-secondary/20 border border-secondary/30 text-secondary px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase w-fit">
           <span className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_#ff6b98] animate-pulse"></span>
-          Live: Human vs AI Epoch 7
+          Live: Human vs AI Epoch 1
         </span>
         <h1 className="font-headline text-6xl md:text-8xl font-black leading-[0.9] tracking-tighter uppercase italic">
           Join the <br/><span className="text-primary italic">Synthetic</span> <br/>

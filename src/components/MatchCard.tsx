@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Calendar, MapPin, Trophy, Bot } from "lucide-react";
 import { Match } from "@/types";
+import { TEAM_LOGOS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 interface MatchCardProps {
   match: Match;
@@ -64,26 +66,42 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture }
         </div>
 
         {/* Teams Section */}
-        <div className="flex justify-between items-center gap-4">
+         <div className="flex justify-between items-center gap-4">
           <div className="flex flex-col items-center gap-3 flex-1 text-center">
-            <div className="w-16 h-16 bg-surface-container-highest rounded-full border border-white/5 flex items-center justify-center hex-clip">
-               <span className="text-xl font-black text-white">{match.team_a[0]}</span>
+            <div className={cn(
+              "w-16 h-16 rounded-full border border-white/5 flex items-center justify-center hex-clip overflow-hidden shadow-xl transition-all group-hover:border-primary/50 relative",
+              !TEAM_LOGOS[match.team_a] && "bg-surface-container-highest"
+            )}>
+               {TEAM_LOGOS[match.team_a] ? (
+                 <img src={TEAM_LOGOS[match.team_a]} className="w-full h-full object-cover" alt={match.team_a} />
+               ) : (
+                 <span className="text-xl font-black text-white">{match.team_a[0]}</span>
+               )}
+               {TEAM_LOGOS[match.team_a] && <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>}
             </div>
-            <span className="font-headline font-bold text-sm uppercase">{match.team_a}</span>
+            <span className="font-headline font-bold text-sm uppercase tracking-tighter text-white/90">{match.team_a}</span>
           </div>
 
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-2xl font-black italic text-primary/50">VS</span>
-            <div className="px-3 py-1 bg-surface-container-highest rounded-full text-[8px] font-black text-secondary border border-secondary/20 uppercase">
+          <div className="flex flex-col items-center gap-1 group/vs">
+            <span className="text-2xl font-black italic text-primary/30 group-hover/vs:text-primary transition-colors duration-500">VS</span>
+            <div className="px-3 py-1 bg-surface-container-highest rounded-full text-[8px] font-black text-secondary border border-secondary/20 uppercase tracking-[0.2em]">
               {match.status}
             </div>
           </div>
 
           <div className="flex flex-col items-center gap-3 flex-1 text-center">
-            <div className="w-16 h-16 bg-surface-container-highest rounded-full border border-white/5 flex items-center justify-center hex-clip">
-               <span className="text-xl font-black text-white">{match.team_b[0]}</span>
+            <div className={cn(
+              "w-16 h-16 rounded-full border border-white/5 flex items-center justify-center hex-clip overflow-hidden shadow-xl transition-all group-hover:border-primary/50 relative",
+              !TEAM_LOGOS[match.team_b] && "bg-surface-container-highest"
+            )}>
+               {TEAM_LOGOS[match.team_b] ? (
+                 <img src={TEAM_LOGOS[match.team_b]} className="w-full h-full object-cover" alt={match.team_b} />
+               ) : (
+                 <span className="text-xl font-black text-white">{match.team_b[0]}</span>
+               )}
+               {TEAM_LOGOS[match.team_b] && <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>}
             </div>
-            <span className="font-headline font-bold text-sm uppercase">{match.team_b}</span>
+            <span className="font-headline font-bold text-sm uppercase tracking-tighter text-white/90">{match.team_b}</span>
           </div>
         </div>
 

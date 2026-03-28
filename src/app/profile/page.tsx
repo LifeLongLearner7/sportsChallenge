@@ -32,10 +32,17 @@ export default async function ProfilePage() {
   return (
     <div className="flex flex-col gap-12">
       <header className="flex flex-col md:flex-row items-center gap-8 glass-panel p-8 rounded-3xl border-primary/20">
-        <div className="w-32 h-32 bg-surface-container-highest rounded-full border-4 border-primary/20 p-1 flex items-center justify-center hex-clip">
-          <div className={cn("w-full h-full flex items-center justify-center", selectedAvatar.bg)}>
-            <AvatarIcon size={64} className={selectedAvatar.color} />
-          </div>
+        <div className="w-32 h-32 bg-surface-container-highest rounded-full border-4 border-primary/20 p-1 flex items-center justify-center hex-clip overflow-hidden relative">
+           <div className={cn("w-full h-full flex items-center justify-center relative z-10", !selectedAvatar.path && selectedAvatar.bg)}>
+             {selectedAvatar.path ? (
+                <img src={selectedAvatar.path} className="w-full h-full object-cover" alt="User" />
+             ) : selectedAvatar.icon ? (
+                (() => {
+                  const Icon = selectedAvatar.icon;
+                  return <Icon size={64} className={selectedAvatar.color} />;
+                })()
+             ) : null}
+           </div>
         </div>
         <div className="flex-1 text-center md:text-left">
           <h1 className="font-headline text-4xl font-black text-white uppercase italic tracking-tighter">

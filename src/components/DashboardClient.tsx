@@ -32,7 +32,6 @@ export default function DashboardClient({ initialMatches, initialPredictions, pr
   );
 
   const selectedAvatar = AVATARS.find(a => a.id === profile?.avatar_url) || AVATARS[0];
-  const AvatarIcon = selectedAvatar.icon;
 
   const handlePredict = async (matchId: string, winner: string) => {
     try {
@@ -81,8 +80,15 @@ export default function DashboardClient({ initialMatches, initialPredictions, pr
             <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 blur-2xl -mr-12 -mt-12 group-hover:bg-primary/20 transition-all"></div>
             <div className="relative z-10 flex flex-col gap-4">
               <div className="flex items-center gap-3">
-              <div className={cn("w-12 h-12 rounded-full border border-primary/20 flex items-center justify-center hex-clip overflow-hidden transition-all shadow-xl", selectedAvatar.bg, selectedAvatar.glow)}>
-                 <AvatarIcon size={24} className={cn("transition-transform", selectedAvatar.color)} />
+              <div className={cn("w-12 h-12 rounded-full border border-primary/20 flex items-center justify-center hex-clip overflow-hidden transition-all shadow-xl", !selectedAvatar.path && selectedAvatar.bg, selectedAvatar.glow)}>
+                 {selectedAvatar.path ? (
+                    <img src={selectedAvatar.path} className="w-full h-full object-cover" alt="User" />
+                 ) : selectedAvatar.icon ? (
+                    (() => {
+                      const Icon = selectedAvatar.icon;
+                      return <Icon size={24} className={cn("transition-transform", selectedAvatar.color)} />;
+                    })()
+                 ) : null}
               </div>
                 <div>
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Tactical ID</div>

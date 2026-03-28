@@ -19,7 +19,6 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
   const pathname = usePathname();
 
   const selectedAvatar = AVATARS.find(a => a.id === profile?.avatar_url) || AVATARS[0];
-  const AvatarIcon = selectedAvatar.icon;
 
   const items = isAdmin 
     ? [...navItems, { name: "Admin", href: "/admin", icon: Shield }] 
@@ -71,8 +70,19 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
             className="w-10 h-10 rounded-full bg-surface-container-highest border border-primary/20 p-0.5 overflow-hidden hex-clip hover:border-primary/50 hover:bg-primary/10 transition-all group/avatar relative"
             title="View Strategic Dossier"
           >
-             <div className={cn("w-full h-full flex items-center justify-center transition-colors shadow-inner", selectedAvatar.bg, "group-hover/avatar:bg-primary/20")}>
-                <AvatarIcon size={20} className={cn("transition-transform group-hover/avatar:scale-110", selectedAvatar.color)} />
+             <div className={cn("w-full h-full flex items-center justify-center transition-colors shadow-inner relative overflow-hidden", !selectedAvatar.path && selectedAvatar.bg, "group-hover/avatar:bg-primary/20")}>
+                {selectedAvatar.path ? (
+                  <img 
+                    src={selectedAvatar.path} 
+                    alt={selectedAvatar.name}
+                    className="w-full h-full object-cover transition-transform group-hover/avatar:scale-110"
+                  />
+                ) : selectedAvatar.icon ? (
+                  (() => {
+                    const Icon = selectedAvatar.icon;
+                    return <Icon size={20} className={cn("transition-transform group-hover/avatar:scale-110", selectedAvatar.color)} />;
+                  })()
+                ) : null}
              </div>
           </Link>
         </div>
