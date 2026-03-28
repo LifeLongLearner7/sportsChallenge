@@ -15,7 +15,8 @@ interface LeaderboardClientProps {
 }
 
 export default function LeaderboardClient({ rankers, currentUserProfile, globalStats }: LeaderboardClientProps) {
-  const [gold, silver, bronze] = top3;
+  const [gold, silver, bronze] = rankers.slice(0, 3);
+  const others = rankers.slice(3);
 
   return (
     <main className="min-h-screen pt-32 pb-20 bg-background relative overflow-hidden">
