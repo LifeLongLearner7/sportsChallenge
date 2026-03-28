@@ -20,14 +20,14 @@ export async function getUserProfile() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return null;
-
-  const { data, error } = await supabase
+  
+  const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
-  if (error || !data) {
+  if (!profile) {
     // Return a basic profile object if the record is missing
     return {
       id: user.id,
@@ -36,10 +36,44 @@ export async function getUserProfile() {
       matches_predicted: 0,
       accuracy: 0,
       is_admin: false,
-    } as Profile;
+      rank: 999
+    } as Profile & { rank: number };
   }
 
-  return data as Profile;
+  // Calculate Rank
+  const { count } = await supabase
+    .from("profiles")
+    .select("*", { count: 'exact', head: true })
+    .gt("points", profile.points || 0);
+
+  return { ...profile, rank: (count || 0) + 1 } as Profile & { rank: number };
+}
+
+export async function getLeaderboardStats() {
+  const supabase = await createClient();
+  
+  // 1. Total Nodes (Strategists)
+  const { count: activeNodes } = await supabase
+    .from("profiles")
+    .select("*", { count: 'exact', head: true });
+
+  // 2. Mean Accuracy
+  const { data: accuracyData } = await supabase
+    .from("profiles")
+    .select("accuracy");
+
+  const avgAccuracy = accuracyData?.length 
+    ? accuracyData.reduce((acc, p) => acc + (p.accuracy || 0), 0) / accuracyData.length 
+    : 0;
+
+  // 3. Human Dominance (Vs 50% baseline)
+  const dominance = avgAccuracy - 50;
+
+  return {
+    activeNodes: activeNodes?.toLocaleString() || "0",
+    meanAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1) + "%",
+    dominance: (dominance > 0 ? "+" : "") + (Math.round(dominance * 10) / 10).toFixed(1) + "%"
+  };
 }
 
 export async function getUserPredictions() {
@@ -126,6 +160,40 @@ export async function getGlobalStats() {
     userCount: userCount || 0,
     avgHumanAccuracy: Math.round(avgHumanAccuracy * 10) / 10,
     avgAiAccuracy: Math.round(avgAiAccuracy * 10) / 10,
+  };
+}
+
+export async function getLandingStats() {
+  const supabase = await createClient();
+  
+  // 1. Total Human Points (Collective Status)
+  const { data: humanPointsData } = await supabase
+    .from("profiles")
+    .select("points");
+  
+  const totalHumanPoints = humanPointsData?.reduce((acc, p) => acc + (p.points || 0), 0) || 0;
+
+  // 2. AI Core Integrity (Total Confidence from all resolved matches)
+  const { data: aiConfidenceData } = await supabase
+    .from("matches")
+    .select("ai_confidence")
+    .not("winner", "is", null);
+
+  const totalAiPoints = aiConfidenceData?.reduce((acc, m) => acc + (m.ai_confidence || 0), 0) || 0;
+
+  // 3. Global Accuracy (Average across all strategists)
+  const { data: globalAccuracyData } = await supabase
+    .from("profiles")
+    .select("accuracy");
+
+  const avgAccuracy = globalAccuracyData?.length 
+    ? globalAccuracyData.reduce((acc, p) => acc + (p.accuracy || 0), 0) / globalAccuracyData.length 
+    : 0;
+
+  return {
+    humanScore: totalHumanPoints.toLocaleString(),
+    aiScore: totalAiPoints.toLocaleString(),
+    globalAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1)
   };
 }
 

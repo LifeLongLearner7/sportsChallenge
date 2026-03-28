@@ -29,8 +29,13 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
     <nav className="fixed top-0 left-0 w-full z-50 bg-slate-950/60 backdrop-blur-xl border-b border-cyan-500/15 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
       <div className="max-w-screen-2xl mx-auto px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-8">
-          <Link href="/" className="text-2xl font-black italic tracking-tighter text-primary drop-shadow-[0_0_8px_rgba(0,229,255,0.5)] font-headline uppercase">
-            CYBER-CRICKET
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-8 h-8 relative group-hover:scale-110 transition-transform">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]" />
+            </div>
+            <span className="text-2xl font-black italic tracking-tighter text-primary drop-shadow-[0_0_8px_rgba(0,229,255,0.5)] font-headline uppercase leading-none">
+              CYBER-SPORTS
+            </span>
           </Link>
           
           <div className="hidden md:flex gap-6 font-headline tracking-tight font-bold text-sm uppercase">
@@ -56,17 +61,17 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
             title="Disconnect Session"
           >
             <LogOut size={20} />
-            <span className="absolute -bottom-8 right-0 bg-slate-900 text-red-400 text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap border border-red-500/20 shadow-xl">
-              SYSTEM LOGOUT
+            <span className="absolute -bottom-8 right-0 bg-slate-900 text-red-500 text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap border border-red-500/20 shadow-xl">
+              Logout
             </span>
           </button>
           
           <Link 
             href="/profile"
-            className="w-10 h-10 rounded-full bg-surface-container-highest border border-primary/20 p-0.5 overflow-hidden hex-clip hover:border-primary/50 transition-all group/avatar"
+            className="w-10 h-10 rounded-full bg-surface-container-highest border border-primary/20 p-0.5 overflow-hidden hex-clip hover:border-primary/50 hover:bg-primary/10 transition-all group/avatar relative"
             title="View Strategic Dossier"
           >
-             <div className={cn("w-full h-full flex items-center justify-center transition-colors", selectedAvatar.bg, "group-hover/avatar:bg-primary/30")}>
+             <div className={cn("w-full h-full flex items-center justify-center transition-colors shadow-inner", selectedAvatar.bg, "group-hover/avatar:bg-primary/20")}>
                 <AvatarIcon size={20} className={cn("transition-transform group-hover/avatar:scale-110", selectedAvatar.color)} />
              </div>
           </Link>

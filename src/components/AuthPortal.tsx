@@ -92,6 +92,8 @@ function AuthForm({ mode, setMode, loading, setLoading }: any) {
       </form>
 
       <div className="flex flex-col gap-4">
+         {/* Public Sign Up Disabled - Strategist enrollment now handled by Admin Command Center */}
+         {/* 
          <button 
           onClick={() => {
             setMode(mode === "signIn" ? "signUp" : "signIn");
@@ -103,6 +105,7 @@ function AuthForm({ mode, setMode, loading, setLoading }: any) {
            {mode === "signIn" ? "New Strategist? Access Neural Link" : "Already Linked? Return to Portal"}
            <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
          </button>
+         */}
 
          <div className="relative py-2">
           <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>

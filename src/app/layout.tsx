@@ -15,7 +15,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "CYBER-CRICKET | Humans vs AI Arena",
+  title: "CYBER-SPORTS | Humans vs AI Arena",
   description: "Predict IPL 2026 match outcomes and compete against AI models in the ultimate synthetic arena.",
 };
 

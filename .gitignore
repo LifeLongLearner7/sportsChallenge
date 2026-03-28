@@ -38,15 +38,5 @@ error.log*
 next-env.d.ts
 
 # scratch scripts and research tools
-brute_cols.mjs
-debug_prediction.mjs
-get_cols.mjs
-inspect_db.mjs
-inspect_predictions.mjs
-probe_columns.mjs
-probe_matches.mjs
-seed.mjs
-seed_v*.mjs
-test_db.mjs
-verify_fix.mjs
-!seed_full_ipl_2026.mjs
+/research_vault
+/tmp
