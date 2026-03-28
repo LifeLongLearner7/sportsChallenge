@@ -15,8 +15,7 @@ interface LeaderboardClientProps {
 }
 
 export default function LeaderboardClient({ rankers, currentUserProfile, globalStats }: LeaderboardClientProps) {
-  const top3 = rankers.slice(0, 3);
-  const others = rankers.slice(3);
+  const [gold, silver, bronze] = top3;
 
   return (
     <main className="min-h-screen pt-32 pb-20 bg-background relative overflow-hidden">
@@ -37,12 +36,12 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
         {/* Top 3 Podium */}
         <div className="grid md:grid-cols-3 gap-8 items-end max-w-5xl mx-auto w-full">
           {/* Silver - Rank 2 */}
-          {top3[1] && (
+          {silver && (
             <div className="order-2 md:order-1 flex flex-col items-center gap-6 group">
               <div className="relative">
                 <div className="w-24 h-24 hex-clip bg-white/5 border-2 border-slate-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(148,163,184,0.3)]">
-                   {top3[1].avatar_url ? (
-                      <img src={top3[1].avatar_url} className="w-full h-full object-cover" alt="User" />
+                   {silver.avatar_url ? (
+                      <img src={silver.avatar_url} className="w-full h-full object-cover" alt="User" />
                    ) : (
                       <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold">U2</div>
                    )}
@@ -50,22 +49,22 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-slate-400 text-slate-950 font-black px-3 py-0.5 text-xs hex-clip">02</div>
               </div>
               <div className="text-center">
-                <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{top3[1].screen_name || "STRATEGIST_" + top3[1].id.slice(0,4)}</div>
-                <div className="text-primary font-bold">{top3[1].points.toLocaleString()} PTS</div>
+                <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{silver.screen_name || "STRATEGIST_" + silver.id.slice(0,4)}</div>
+                <div className="text-primary font-bold">{(silver.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
           )}
 
           {/* Gold - Rank 1 */}
-          {top3[0] && (
+          {gold && (
             <div className="order-1 md:order-2 flex flex-col items-center gap-8 group mb-8 md:mb-16">
               <div className="relative">
                  {/* Halo effect for gold */}
                 <div className="absolute inset-0 bg-tertiary/20 rounded-full blur-3xl animate-pulse"></div>
                 
                 <div className="w-32 h-32 hex-clip bg-white/5 border-2 border-tertiary p-1.5 group-hover:scale-105 transition-all duration-700 overflow-hidden shadow-[0_0_40px_rgba(255,231,146,0.4)] relative z-10">
-                   {top3[0].avatar_url ? (
-                      <img src={top3[0].avatar_url} className="w-full h-full object-cover" alt="User" />
+                   {gold.avatar_url ? (
+                      <img src={gold.avatar_url} className="w-full h-full object-cover" alt="User" />
                    ) : (
                       <div className="w-full h-full bg-slate-800 flex items-center justify-center text-tertiary font-bold">U1</div>
                    )}
@@ -74,19 +73,19 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
                 <Trophy className="absolute -top-10 left-1/2 -translate-x-1/2 text-tertiary drop-shadow-[0_0_15px_rgba(255,231,146,0.8)]" size={40} />
               </div>
               <div className="text-center">
-                <div className="font-black text-white uppercase tracking-tight text-2xl mb-1">{top3[0].screen_name || "STRATEGIST_" + top3[0].id.slice(0,4)}</div>
-                <div className="text-tertiary font-bold text-lg">{top3[0].points.toLocaleString()} PTS</div>
+                <div className="font-black text-white uppercase tracking-tight text-2xl mb-1">{gold.screen_name || "STRATEGIST_" + gold.id.slice(0,4)}</div>
+                <div className="text-tertiary font-bold text-lg">{(gold.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
           )}
 
           {/* Bronze - Rank 3 */}
-          {top3[2] && (
+          {bronze && (
             <div className="order-3 md:order-3 flex flex-col items-center gap-6 group">
               <div className="relative">
                 <div className="w-24 h-24 hex-clip bg-white/5 border-2 border-orange-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(251,146,60,0.3)]">
-                   {top3[2].avatar_url ? (
-                      <img src={top3[2].avatar_url} className="w-full h-full object-cover" alt="User" />
+                   {bronze.avatar_url ? (
+                      <img src={bronze.avatar_url} className="w-full h-full object-cover" alt="User" />
                    ) : (
                       <div className="w-full h-full bg-slate-800 flex items-center justify-center text-orange-400 font-bold">U3</div>
                    )}
@@ -94,8 +93,8 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-orange-400 text-slate-950 font-black px-3 py-0.5 text-xs hex-clip">03</div>
               </div>
               <div className="text-center">
-                <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{top3[2].screen_name || "STRATEGIST_" + top3[2].id.slice(0,4)}</div>
-                <div className="text-primary font-bold">{top3[2].points.toLocaleString()} PTS</div>
+                <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{bronze.screen_name || "STRATEGIST_" + bronze.id.slice(0,4)}</div>
+                <div className="text-primary font-bold">{(bronze.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
           )}
