@@ -201,7 +201,7 @@ export default function ArenaClient({
                         <div className="flex items-center gap-6">
                            <div className="flex flex-col gap-1 items-center justify-center w-16">
                               <span className="text-[8px] font-black text-slate-500 uppercase">Winner</span>
-                              <span className="text-sm font-headline font-black text-white uppercase italic">{match.winner === 'team_a' ? match.team_a.split(' ')[0] : match.team_b.split(' ')[0]}</span>
+                               <span className="text-sm font-headline font-black text-white uppercase italic">{match.winner}</span>
                            </div>
                            <div className="h-8 w-px bg-white/5"></div>
                            <div>
@@ -211,8 +211,9 @@ export default function ArenaClient({
                               <div className="flex gap-4">
                                  <div className="flex items-center gap-1.5">
                                     <div className={cn("w-2 h-2 rounded-full", aiWinner ? "bg-green-500 shadow-[0_0_8px_green]" : "bg-red-500 shadow-[0_0_8px_red]")}></div>
-                                    <span className="text-[8px] font-black text-slate-400 uppercase">AI: {match.ai_prediction === 'team_a' ? 'Team A' : 'Team B'}</span>
+                                    <span className="text-[8px] font-black text-slate-400 uppercase">AI: {match.ai_prediction}</span>
                                  </div>
+
                                  <div className="flex items-center gap-1.5">
                                     <div className="w-2 h-2 rounded-full bg-primary/50"></div>
                                     <span className="text-[8px] font-black text-slate-400 uppercase">Con: 82% Correct</span>

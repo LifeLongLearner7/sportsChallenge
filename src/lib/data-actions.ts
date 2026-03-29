@@ -190,12 +190,22 @@ export async function getLandingStats() {
     ? globalAccuracyData.reduce((acc, p) => acc + (p.accuracy || 0), 0) / globalAccuracyData.length 
     : 0;
 
+  // 4. Top Predictor (Real-time Leaderboard)
+  const { data: topUser } = await supabase
+    .from("profiles")
+    .select("screen_name, accuracy")
+    .order("points", { ascending: false })
+    .limit(1)
+    .single();
+
   return {
     humanScore: totalHumanPoints.toLocaleString(),
     aiScore: totalAiPoints.toLocaleString(),
-    globalAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1)
+    globalAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1),
+    topPredictor: topUser || { screen_name: "STRIKER_X", accuracy: 89.4 }
   };
 }
+
 
 export async function getLeaderboard(limit = 10) {
   const supabase = await createClient();
@@ -341,3 +351,50 @@ export async function getAdminAnalytics() {
 
   return { dailyVolume, sentiment };
 }
+
+export async function updateMatchWinner(matchId: string, winnerKey: "team_a" | "team_b") {
+  const supabase = await createClient();
+  
+  // 1. Get Match Data (to get ai_prediction and actual team names)
+  const { data: match, error: fetchError } = await supabase
+    .from("matches")
+    .select("ai_prediction, team_a, team_b")
+    .eq("id", matchId)
+    .single();
+
+  if (fetchError || !match) throw new Error("Match not found");
+
+  // Resolve actual name (e.g., 'RCB' instead of 'team_a')
+  const actualWinnerName = winnerKey === "team_a" ? match.team_a : match.team_b;
+
+  // 2. Update Match
+  const { error: updateError } = await supabase
+    .from("matches")
+    .update({ 
+      winner: actualWinnerName, 
+      status: "completed"
+    })
+
+    .eq("id", matchId);
+
+  if (updateError) throw updateError;
+
+  // 3. Process Scoring with the actual team name
+  const { processAllPredictionsForMatch } = await import("./scoring");
+  await processAllPredictionsForMatch(matchId, actualWinnerName, match.ai_prediction);
+
+
+  revalidatePath("/dashboard");
+  revalidatePath("/arena");
+  revalidatePath("/leaderboard");
+  revalidatePath("/admin/matches");
+  
+  return { success: true };
+}
+
+export async function triggerManualSync() {
+  const { systemAutomatedSync } = await import("./ai-actions");
+  const result = await systemAutomatedSync();
+  return result;
+}
+

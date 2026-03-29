@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
-import { Profile } from "@/types";
+import { Profile, Match } from "@/types";
+
 import { 
   Shield, 
   RefreshCcw, 
@@ -33,11 +34,18 @@ interface AdminClientProps {
       total: number;
     };
   };
+  completedMatches?: Match[];
 }
 
-export default function AdminClient({ profile, analytics }: AdminClientProps) {
+
+import { useRouter } from "next/navigation";
+
+export default function AdminClient({ profile, analytics, completedMatches = [] }: AdminClientProps) {
+
+  const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
+
   const [syncLogs, setSyncLogs] = useState<{ id: number; msg: string; type: 'info' | 'success' | 'err' }[]>([]);
 
   // Enrollment State
@@ -138,11 +146,14 @@ export default function AdminClient({ profile, analytics }: AdminClientProps) {
                  <span className="text-xl font-headline font-black text-white italic">1,248</span>
               </div>
               <div className="w-px h-8 bg-white/10"></div>
-              <div className="flex flex-col">
-                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Global Stability</span>
-                 <span className="text-xl font-headline font-black text-green-500 italic">98.2%</span>
+              <div className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity" onClick={() => router.push("/admin/matches")}>
+                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                   Grid Control <ChevronRight size={8} />
+                 </span>
+                 <span className="text-xl font-headline font-black text-secondary italic underline decoration-secondary/30 decoration-offset-4">Tactical Grid</span>
               </div>
            </div>
+
         </div>
 
         <div className="grid lg:grid-cols-12 gap-8">

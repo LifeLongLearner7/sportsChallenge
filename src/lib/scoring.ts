@@ -1,4 +1,4 @@
-import { MOCK_MATCHES } from "./mock";
+import { createClient } from "./auth-actions";
 
 export interface PredictionResult {
   userId: string;
@@ -11,67 +11,109 @@ export interface PredictionResult {
 }
 
 /**
- * The Strategic Scoring Engine logic.
- * In a real-world scenario, this would interact with the Supabase database.
- * For this MVP, we simulate the calculation process.
+ * Calculates correct points based on prediction and AI performance.
+ * Logic:
+ * - 100 points for correct prediction.
+ * - 50 points bonus if Human was correct AND AI was wrong ("Neural Override").
  */
 export const calculatePoints = (
   userWinner: string, 
   aiWinner: string, 
   actualWinner: string
-): { points: number; beatTheAI: boolean } => {
+): { points: number; isNeuralOverride: boolean } => {
   let points = 0;
-  let beatTheAI = false;
+  let isNeuralOverride = false;
 
-  // Base logic: Correct prediction wins points
-  if (userWinner === actualWinner) {
+  // Correct Prediction: +100
+  if (userWinner.toLowerCase() === actualWinner.toLowerCase()) {
     points += 100;
     
-    // Strategic "Beat the AI" Bonus
-    // If the human predictor was correct AND the AI was wrong
-    if (aiWinner !== actualWinner) {
+    // Neural Override (Beat the AI): +50
+    // Only if AI was WRONG and Human was RIGHT
+    if (aiWinner.toLowerCase() !== actualWinner.toLowerCase()) {
       points += 50;
-      beatTheAI = true;
+      isNeuralOverride = true;
     }
   }
 
-  return { points, beatTheAI };
+  return { points, isNeuralOverride };
 };
+
 
 /**
- * Simulates the payout cycle for a completed match.
+ * Processes all predictions for a specifically completed match.
+ * Performs a batch update of both predictions and profile points.
  */
-export const processMatchPayouts = async (matchId: string, actualWinner: string) => {
-  const match = MOCK_MATCHES.find(m => m.id === matchId);
-  if (!match) return null;
+export const processAllPredictionsForMatch = async (matchId: string, actualWinner: string, aiWinner?: string) => {
+  const supabase = await createClient();
 
-  // Mock prediction processing for a single user (the current player)
-  const userPick = "CSK"; // This would come from the user's prediction record in Supabase
-  const result = calculatePoints(userPick, match.ai_prediction, actualWinner);
+  // 1. Fetch all predictions for this match
+  const { data: predictions, error: fetchError } = await supabase
+    .from("predictions")
+    .select("user_id, prediction")
+    .eq("match_id", matchId);
 
-  return {
-    matchId,
-    actualWinner,
-    pointsAwarded: result.points,
-    bonusEarned: result.beatTheAI ? "Neural Override Bonus (+50)" : "None",
-    status: "Processed Successfully"
-  };
+  if (fetchError || !predictions || predictions.length === 0) {
+    console.log(`Scoring: No predictions found for match ${matchId}.`);
+    return { success: true, processed: 0 };
+  }
+
+  console.log(`Scoring: Processing ${predictions.length} predictions for match ${matchId}...`);
+
+  let processedCount = 0;
+
+  for (const pred of predictions) {
+    const { points, isNeuralOverride } = calculatePoints(pred.prediction, aiWinner || "", actualWinner);
+    const isCorrect = pred.prediction === actualWinner;
+
+    // A. Update Prediction Record (Use real DB columns)
+    await supabase
+      .from("predictions")
+      .update({
+        points_won: points,
+        is_neural_override: isNeuralOverride
+      })
+      .eq("user_id", pred.user_id)
+      .eq("match_id", matchId);
+
+      // B. Update User Profile Points (Use real DB columns: total_points, accuracy)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("total_points, matches_predicted, accuracy")
+        .eq("id", pred.user_id)
+        .single();
+
+      if (profile) {
+        const newTotalPoints = (profile.total_points || 0) + points;
+        const newMatchesPredicted = (profile.matches_predicted || 0) + 1;
+        
+        // Calculate accuracy directly from the current database state
+        // Correct predictions = count where points_won > 0
+        const { count: totalCorrect } = await supabase
+          .from("predictions")
+          .select("*", { count: 'exact', head: true })
+          .eq("user_id", pred.user_id)
+          .gt("points_won", 0);
+
+        const newAccuracy = newMatchesPredicted > 0 
+          ? ((totalCorrect || 0) / newMatchesPredicted) * 100 
+          : 0;
+
+        await supabase
+          .from("profiles")
+          .update({
+            total_points: newTotalPoints,
+            matches_predicted: newMatchesPredicted,
+            accuracy: Math.round(newAccuracy * 10) / 10
+          })
+          .eq("id", pred.user_id);
+      }
+
+    
+    processedCount++;
+  }
+
+  return { success: true, processed: processedCount };
 };
 
-/**
- * Updates global accuracy stats (Simulated)
- */
-export const updateGlobalMetrics = (
-  humanWins: number, 
-  aiWins: number, 
-  totalMatches: number
-) => {
-  const humanAccuracy = (humanWins / totalMatches) * 100;
-  const aiAccuracy = (aiWins / totalMatches) * 100;
 
-  return {
-    humanAccuracy: humanAccuracy.toFixed(1),
-    aiAccuracy: aiAccuracy.toFixed(1),
-    delta: (aiAccuracy - humanAccuracy).toFixed(1)
-  };
-};

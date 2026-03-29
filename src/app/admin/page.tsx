@@ -1,16 +1,20 @@
-import { getUserProfile, getAdminAnalytics } from "@/lib/data-actions";
+import { getUserProfile, getAdminAnalytics, getMatches } from "@/lib/data-actions";
 import AdminClient from "@/components/AdminClient";
 import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
-  const [profile, analytics] = await Promise.all([
+  const [profile, analytics, matches] = await Promise.all([
      getUserProfile(),
-     getAdminAnalytics()
+     getAdminAnalytics(),
+     getMatches()
   ]);
 
   if (!profile) {
     redirect("/auth");
   }
 
-  return <AdminClient profile={profile} analytics={analytics} />;
+  const completedMatches = matches.filter(m => m.status === "completed");
+
+  return <AdminClient profile={profile} analytics={analytics} completedMatches={completedMatches} />;
 }
+

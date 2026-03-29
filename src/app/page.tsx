@@ -28,7 +28,8 @@ export default async function LandingPage() {
 
       <section className="relative z-10 max-w-screen-2xl mx-auto px-6 pt-10 pb-24 grid lg:grid-cols-2 gap-16 items-center">
         {/* Left Column: Immersive Content (Client Component) */}
-        <LandingHero />
+        <LandingHero stats={stats} />
+
 
         {/* Right Column: Auth Portal */}
         <div className="relative order-1 lg:order-2 flex justify-center lg:justify-end">

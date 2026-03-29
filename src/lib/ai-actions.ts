@@ -9,6 +9,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+import { fetchRecentResults, determineWinner, TEAM_MAPPINGS } from "./api-service";
+import { processAllPredictionsForMatch } from "./scoring";
+
+
 /**
  * Generate a specialized strategic prediction for a match using OpenAI
  */
@@ -28,12 +32,12 @@ export async function generateMatchPrediction(match: Match) {
     Date: ${new Date(match.match_time).toLocaleDateString()}
     
     Format Requirements:
-    - winner: Must be exactly "${match.team_a}" or "${match.team_b}"
+    - winner: Must be exactly "team_a" or "team_b"
     - confidence: An integer between 50 and 99
     - reasoning: A technical, data-driven strategic insight (Exactly 130-150 characters)
     
     Return ONLY a raw JSON object. No markdown, no prose.
-    Example: {"winner": "${match.team_a}", "confidence": 78, "reasoning": "RCB's middle order stability on high scoring Bengaluru surfaces gives them a 14% higher operational efficiency than SRH's current pace attack."}
+    Example: {"winner": "team_a", "confidence": 78, "reasoning": "RCB's middle order stability on high scoring Bengaluru surfaces gives them a 14% higher operational efficiency than SRH's current pace attack."}
   `;
 
   try {
@@ -53,56 +57,88 @@ export async function generateMatchPrediction(match: Match) {
 }
 
 /**
- * The "Daily Strategic Pulse" - Synchronizes results and predictions autonomously
+ * THE RESULT PULSE (02:00 AM IST)
+ * Synchronizes real match results and processes player scoring.
  */
-export async function systemAutomatedSync(revalidate = true) {
+export async function systemResultSync() {
   const supabase = await createClient();
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
-  // 1. Check if Pulse has already occurred today (Lazy-locking)
-  const { data: todaySyncCheck } = await supabase
-    .from("matches")
-    .select("id")
-    .gte("match_time", todayStart)
-    .lt("match_time", new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString())
-    .not("ai_prediction", "is", null)
-    .limit(1);
+  console.log(`Strategic Pulse: Initiating Match Result Sync at ${now.toISOString()}...`);
 
-  if (todaySyncCheck && todaySyncCheck.length > 0) {
-    console.log("Strategic Pulse: Operational state is up-to-date. Sync skipped.");
-    return { success: true, mode: "skipped" };
-  }
-
-  console.log("Strategic Pulse: Initiating daily neural synchronization...");
-
-  // 2. Resolve Yesterday's Results
+  // 1. Resolve Passed Matches via External API
   const { data: pastMatches } = await supabase
     .from("matches")
     .select("*")
     .lt("match_time", now.toISOString())
-    .eq("status", "upcoming");
+    .neq("status", "completed");
 
   if (pastMatches && pastMatches.length > 0) {
+    console.log(`Strategic Pulse: Processing ${pastMatches.length} pending matches.`);
+
+    
+    const externalResults = await fetchRecentResults();
+    
     for (const match of pastMatches) {
-       const winner = Math.random() > 0.5 ? 'team_a' : 'team_b';
-       await supabase
-         .from("matches")
-         .update({ winner, status: "completed" })
-         .eq("id", match.id);
+       // A. Try to find the match in external results using aliases
+       const externalMatch = externalResults.find(em => {
+          const teamNames = em.teams.map(t => t.toLowerCase());
+          const matchA = match.team_a.toLowerCase();
+          const matchB = match.team_b.toLowerCase();
+          
+          const aliasesA = [matchA, ...(TEAM_MAPPINGS[match.team_a] || [])].map(a => a.toLowerCase());
+          const aliasesB = [matchB, ...(TEAM_MAPPINGS[match.team_b] || [])].map(b => b.toLowerCase());
+
+          const hasA = teamNames.some(t => aliasesA.some(a => t.includes(a) || a.includes(t)));
+          const hasB = teamNames.some(t => aliasesB.some(b => t.includes(b) || b.includes(t)));
+          
+          return hasA && hasB;
+       });
+
+       let actualWinner: "team_a" | "team_b" | null = null;
+
+
+       if (externalMatch) {
+         actualWinner = determineWinner(externalMatch, match.team_a, match.team_b);
+       }
+
+       if (actualWinner) {
+         console.log(`Strategic Pulse: Match ${match.id} resolved as ${actualWinner}.`);
+         
+         await supabase
+           .from("matches")
+           .update({ winner: actualWinner, status: "completed" })
+           .eq("id", match.id);
+
+         await processAllPredictionsForMatch(match.id, actualWinner, match.ai_prediction);
+       }
     }
   }
 
-  // 3. Generate Predictions for Today & Tomorrow
-  const { data: upcomingMatches } = await supabase
+  revalidatePath("/dashboard");
+  revalidatePath("/leaderboard");
+  return { success: true, mode: "results_synced" };
+}
+
+/**
+ * THE PREDICTION PULSE (03:00 AM IST)
+ * Generates AI tactical insights for tomorrow's fixtures.
+ */
+export async function systemPredictionSync() {
+  const supabase = await createClient();
+  const now = new Date();
+
+  console.log(`Strategic Pulse: Initiating AI Tactical Prediction Sync...`);
+
+  const { data: upcomingWithoutPredictions } = await supabase
     .from("matches")
     .select("*")
     .gte("match_time", now.toISOString())
-    .lt("match_time", new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString())
-    .is("ai_prediction", null);
+    .is("ai_prediction", null)
+    .limit(5); // Process in small batches if needed
 
-  if (upcomingMatches && upcomingMatches.length > 0) {
-    for (const match of upcomingMatches) {
+  if (upcomingWithoutPredictions && upcomingWithoutPredictions.length > 0) {
+    for (const match of upcomingWithoutPredictions) {
        const prediction = await generateMatchPrediction(match);
        if (prediction) {
          await supabase
@@ -117,11 +153,18 @@ export async function systemAutomatedSync(revalidate = true) {
     }
   }
 
-  if (revalidate) {
-    revalidatePath("/dashboard");
-    revalidatePath("/arena");
-  }
-  
-  console.log("Strategic Pulse: Daily sync cycle complete.");
-  return { success: true, mode: "executed" };
+  revalidatePath("/dashboard");
+  revalidatePath("/arena");
+  return { success: true, mode: "predictions_synced" };
 }
+
+/**
+ * Combined Sync (for manual administration)
+ */
+export async function systemAutomatedSync() {
+  await systemResultSync();
+  await systemPredictionSync();
+  return { success: true, mode: "full_sync" };
+}
+
+
