@@ -269,6 +269,24 @@ export const getLeaderboard = unstable_cache(
   { revalidate: 300 }
 );
 
+export async function getUserRank(userId: string) {
+  const { data: userProfile } = await staticSupabase
+    .from("profiles")
+    .select("points")
+    .eq("id", userId)
+    .single();
+
+  if (!userProfile) return 0;
+
+  const { count, error } = await staticSupabase
+    .from("profiles")
+    .select("*", { count: 'exact', head: true })
+    .gt("points", userProfile.points || 0);
+
+  if (error) return 0;
+  return (count || 0) + 1;
+}
+
 // Arena Data Actions
 export const getCompletedMatches = unstable_cache(
   async () => {

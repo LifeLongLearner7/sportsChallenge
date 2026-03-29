@@ -1,4 +1,4 @@
-import { getLeaderboard, getUserProfile, getLeaderboardStats } from "@/lib/data-actions";
+import { getLeaderboard, getUserProfile, getLeaderboardStats, getUserRank } from "@/lib/data-actions";
 import LeaderboardClient from "@/components/LeaderboardClient";
 
 export default async function LeaderboardPage() {
@@ -8,5 +8,10 @@ export default async function LeaderboardPage() {
     getLeaderboardStats(),
   ]);
 
-  return <LeaderboardClient rankers={rankers} currentUserProfile={profile} globalStats={stats} />;
+  const rank = profile ? await getUserRank(profile.id) : 0;
+  const profileWithRank = profile 
+    ? { ...profile, rank } 
+    : null;
+
+  return <LeaderboardClient rankers={rankers} currentUserProfile={profileWithRank} globalStats={stats} />;
 }
