@@ -255,10 +255,14 @@ export default function AdminMatchesPage() {
                   <p className="text-[10px] font-bold uppercase tracking-tight">{match.team_a} vs {match.team_b}</p>
                   <div className="flex items-center gap-2">
                     <span className="text-[8px] font-mono text-white/30 uppercase">Winner:</span>
-                    <span className="text-[9px] font-black uppercase text-emerald-400">{match.winner === 'team_a' ? match.team_a : match.team_b}</span>
+                    <span className="text-[9px] font-black uppercase text-emerald-400">
+                      {match.winner === match.team_a ? match.team_a : match.team_b}
+                    </span>
                     <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                   </div>
+
                 </div>
+
               ))}
             </div>
           </div>

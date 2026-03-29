@@ -4,6 +4,16 @@ import { createClient } from "./auth-actions";
 import { Match, Prediction, Profile } from "@/types";
 import { revalidatePath } from "next/cache";
 
+async function requireAdmin() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+  
+  const { data } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+  if (!data?.is_admin) throw new Error("Forbidden: Admin privileges required");
+  return user;
+}
+
 export async function getMatches() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -283,6 +293,21 @@ export async function sendArenaMessage(content: string) {
 
 export async function deleteArenaMessage(messageId: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  // Check if admin
+  const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+  
+  // Check message ownership
+  const { data: message } = await supabase.from("arena_messages").select("user_id").eq("id", messageId).single();
+  
+  if (!message) throw new Error("Message not found");
+  
+  if (message.user_id !== user.id && !profile?.is_admin) {
+    throw new Error("Forbidden: You can only delete your own messages");
+  }
+
   const { error } = await supabase
     .from("arena_messages")
     .delete()
@@ -353,6 +378,7 @@ export async function getAdminAnalytics() {
 }
 
 export async function updateMatchWinner(matchId: string, winnerKey: "team_a" | "team_b") {
+  await requireAdmin();
   const supabase = await createClient();
   
   // 1. Get Match Data (to get ai_prediction and actual team names)
@@ -393,6 +419,7 @@ export async function updateMatchWinner(matchId: string, winnerKey: "team_a" | "
 }
 
 export async function triggerManualSync() {
+  await requireAdmin();
   const { systemAutomatedSync } = await import("./ai-actions");
   const result = await systemAutomatedSync();
   return result;
