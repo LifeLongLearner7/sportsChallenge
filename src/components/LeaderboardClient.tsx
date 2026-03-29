@@ -119,8 +119,8 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
         </div>
 
         {/* Rest of Leaderboard Table */}
-        <div className="glass-panel rounded-[40px] overflow-hidden border-white/5 shadow-2xl">
-          <div className="bg-white/5 grid grid-cols-12 px-10 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+        <div className="glass-panel text-center md:text-left rounded-[30px] md:rounded-[40px] overflow-hidden border-white/5 shadow-2xl">
+          <div className="hidden md:grid bg-white/5 grid-cols-12 px-10 py-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
             <div className="col-span-1">RNK</div>
             <div className="col-span-4">IDENTIFIED STRATEGIST</div>
             <div className="col-span-2 text-center">PRECISION</div>
@@ -130,31 +130,49 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
 
           <div className="divide-y divide-white/5">
             {others.map((ranker, idx) => (
-              <div key={ranker.id} className="grid grid-cols-12 px-10 py-8 items-center hover:bg-white/5 transition-all group cursor-pointer border-l-4 border-transparent hover:border-primary/40">
-                <div className="col-span-1 font-headline text-3xl font-black text-slate-700 group-hover:text-primary transition-colors italic tracking-tighter">
+              <div key={ranker.id} className="flex flex-col md:grid md:grid-cols-12 gap-6 md:gap-0 px-6 md:px-10 py-8 items-center hover:bg-white/5 transition-all group cursor-pointer border-l-4 border-transparent hover:border-primary/40 relative">
+                
+                {/* Rank Badge - Absolute Mobile, Standard Desktop */}
+                <div className="absolute top-4 left-6 md:static md:col-span-1 font-headline text-2xl md:text-3xl font-black text-slate-700 group-hover:text-primary transition-colors italic tracking-tighter">
                   {(idx + 4).toString().padStart(2, '0')}
                 </div>
-                <div className="col-span-4 flex items-center gap-5">
-                  <div className="w-12 h-12 hex-clip bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shadow-inner">
+                
+                {/* Avatar and Name */}
+                <div className="md:col-span-4 flex flex-col md:flex-row items-center gap-4 md:gap-5 mt-4 md:mt-0">
+                  <div className="w-16 h-16 md:w-12 md:h-12 hex-clip bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shadow-inner">
                     {(() => {
                       const avatar = getAvatar(ranker.avatar_url);
                       if (avatar.path) return <img src={avatar.path} className="w-full h-full object-cover" alt="User" />;
                       if (avatar.icon) {
                         const Icon = avatar.icon;
-                        return <Icon size={22} className="text-slate-600" />;
+                        return <Icon size={26} className="text-slate-600" />;
                       }
-                      return <TrendingUp size={22} className="text-slate-600" />;
+                      return <TrendingUp size={26} className="text-slate-600" />;
                     })()}
                   </div>
-                  <div>
-                    <div className="font-black text-white uppercase text-sm tracking-tight mb-0.5 group-hover:text-primary transition-colors">
+                  <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                    <div className="font-black text-white uppercase text-base md:text-sm tracking-tight mb-0.5 group-hover:text-primary transition-colors">
                       {ranker.screen_name || "Predictor_" + ranker.id.slice(0,4)}
                     </div>
                     <div className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em]">ELITE ARCHITECT</div>
                   </div>
                 </div>
-                <div className="col-span-2 text-center font-black text-white tracking-widest">{ranker.accuracy}%</div>
-                <div className="col-span-3 px-12">
+                
+                {/* Mobile Only Quick Stats */}
+                <div className="flex md:hidden w-full bg-black/40 border border-white/5 rounded-xl p-4 justify-between">
+                  <div className="flex flex-col gap-1 items-center flex-1 border-r border-white/5">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Precision</span>
+                    <span className="font-black text-white">{ranker.accuracy}%</span>
+                  </div>
+                  <div className="flex flex-col gap-1 items-center flex-1">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Points</span>
+                    <span className="font-headline font-black text-xl italic text-primary">{(ranker.points || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Desktop Only Stats */}
+                <div className="hidden md:block col-span-2 text-center font-black text-white tracking-widest">{ranker.accuracy}%</div>
+                <div className="hidden md:block col-span-3 px-12">
                   <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden shadow-inner">
                     <div 
                       className="h-full bg-primary shadow-[0_0_12px_rgba(129,236,255,0.6)] rounded-full transition-all duration-1000"
@@ -162,7 +180,7 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
                     ></div>
                   </div>
                 </div>
-                <div className="col-span-2 text-right font-headline text-2xl font-black text-white italic tracking-tighter">
+                <div className="hidden md:block col-span-2 text-right font-headline text-2xl font-black text-white italic tracking-tighter">
                   {(ranker.points || 0).toLocaleString()}
                 </div>
               </div>

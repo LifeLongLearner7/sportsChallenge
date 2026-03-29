@@ -63,8 +63,8 @@ export default function LandingHero({ stats }: LandingHeroProps) {
              Thousands of humans are already predicting...
           </div>
 
-          {/* Top Predictor Highlight Card - Anchored to the action belt */}
-          <div className="hidden lg:block absolute left-full ml-12 top-1/2 -translate-y-1/2 z-20 pointer-events-none w-64">
+          {/* Top Predictor Highlight Card - Anchored to action belt on desktop, flows below on mobile */}
+          <div className="mt-6 lg:mt-0 relative lg:absolute lg:left-full lg:ml-12 lg:top-1/2 lg:-translate-y-1/2 z-20 pointer-events-none w-full sm:w-80 lg:w-64">
             <motion.div 
               initial={{ opacity: 0, scale: 0.8, x: 20 }}
               animate={{ opacity: 1, scale: 1, x: 0, rotate: -6 }}
