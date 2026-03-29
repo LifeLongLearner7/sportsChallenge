@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Match, Profile } from "@/types";
 import { AVATARS } from "@/lib/constants";
 import Navbar from "@/components/Navbar";
@@ -286,7 +287,7 @@ export default function ArenaClient({
                             {!isOwn && (
                               <div className={cn("w-6 h-6 rounded-full flex items-center justify-center hex-clip overflow-hidden relative", !msgAvatar.path && msgAvatar.bg, "border border-white/10")}>
                                  {msgAvatar.path ? (
-                                    <img src={msgAvatar.path} className="w-full h-full object-cover" alt="User" />
+                                    <Image src={msgAvatar.path} fill sizes="24px" className="object-cover" alt="User" />
                                  ) : msgAvatar.icon ? (
                                     (() => {
                                       const Icon = msgAvatar.icon;
@@ -302,7 +303,7 @@ export default function ArenaClient({
                             {isOwn && (
                               <div className={cn("w-6 h-6 rounded-full flex items-center justify-center hex-clip overflow-hidden relative", !msgAvatar.path && msgAvatar.bg, "border border-white/10")}>
                                  {msgAvatar.path ? (
-                                    <img src={msgAvatar.path} className="w-full h-full object-cover" alt="User" />
+                                    <Image src={msgAvatar.path} fill sizes="24px" className="object-cover" alt="User" />
                                  ) : msgAvatar.icon ? (
                                     (() => {
                                       const Icon = msgAvatar.icon;

@@ -1,6 +1,7 @@
 "use client";
 
 import Navbar from "@/components/Navbar";
+import Image from "next/image";
 import { Trophy, TrendingUp } from "lucide-react";
 import { Profile } from "@/types";
 import { ALL_IDENTITIES } from "@/lib/constants";
@@ -45,10 +46,10 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
           {silver && (
             <div className="order-2 md:order-1 flex flex-col items-center gap-6 group">
               <div className="relative">
-                <div className="w-24 h-24 hex-clip bg-white/5 border-2 border-slate-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(148,163,184,0.3)] flex items-center justify-center">
+                <div className="w-24 h-24 relative hex-clip bg-white/5 border-2 border-slate-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(148,163,184,0.3)] flex items-center justify-center">
                    {(() => {
                       const avatar = getAvatar(silver.avatar_url);
-                      if (avatar.path) return <img src={avatar.path} className="w-full h-full object-cover" alt="User" />;
+                      if (avatar.path) return <Image src={avatar.path} fill sizes="96px" className="object-cover" alt="User" />;
                       if (avatar.icon) {
                         const Icon = avatar.icon;
                         return <Icon size={32} className="text-slate-400" />;
@@ -75,7 +76,7 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
                 <div className="w-32 h-32 hex-clip bg-white/5 border-2 border-tertiary p-1.5 group-hover:scale-105 transition-all duration-700 overflow-hidden shadow-[0_0_40px_rgba(255,231,146,0.4)] relative z-10 flex items-center justify-center">
                    {(() => {
                       const avatar = getAvatar(gold.avatar_url);
-                      if (avatar.path) return <img src={avatar.path} className="w-full h-full object-cover" alt="User" />;
+                      if (avatar.path) return <Image src={avatar.path} fill sizes="128px" priority className="object-cover" alt="User" />;
                       if (avatar.icon) {
                         const Icon = avatar.icon;
                         return <Icon size={44} className="text-tertiary" />;
@@ -97,10 +98,10 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
           {bronze && (
             <div className="order-3 md:order-3 flex flex-col items-center gap-6 group">
               <div className="relative">
-                <div className="w-24 h-24 hex-clip bg-white/5 border-2 border-orange-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(251,146,60,0.3)] flex items-center justify-center">
+                <div className="w-24 h-24 relative hex-clip bg-white/5 border-2 border-orange-400 p-1 group-hover:border-primary transition-all duration-500 overflow-hidden shadow-[0_0_20px_rgba(251,146,60,0.3)] flex items-center justify-center">
                    {(() => {
                       const avatar = getAvatar(bronze.avatar_url);
-                      if (avatar.path) return <img src={avatar.path} className="w-full h-full object-cover" alt="User" />;
+                      if (avatar.path) return <Image src={avatar.path} fill sizes="96px" className="object-cover" alt="User" />;
                       if (avatar.icon) {
                         const Icon = avatar.icon;
                         return <Icon size={32} className="text-orange-400" />;
@@ -139,10 +140,10 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
                 
                 {/* Avatar and Name */}
                 <div className="md:col-span-4 flex flex-col md:flex-row items-center gap-4 md:gap-5 mt-4 md:mt-0">
-                  <div className="w-16 h-16 md:w-12 md:h-12 hex-clip bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shadow-inner">
+                  <div className="w-16 h-16 md:w-12 md:h-12 relative hex-clip bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shadow-inner">
                     {(() => {
                       const avatar = getAvatar(ranker.avatar_url);
-                      if (avatar.path) return <img src={avatar.path} className="w-full h-full object-cover" alt="User" />;
+                      if (avatar.path) return <Image src={avatar.path} fill sizes="64px" className="object-cover" alt="User" />;
                       if (avatar.icon) {
                         const Icon = avatar.icon;
                         return <Icon size={26} className="text-slate-600" />;

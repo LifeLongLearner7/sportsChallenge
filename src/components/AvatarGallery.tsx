@@ -1,6 +1,7 @@
 "use client";
 
 import { AvatarOption } from "@/lib/constants";
+import Image from "next/image";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -43,10 +44,12 @@ export default function AvatarGallery({
             )}>
               {avatar.path ? (
                 <>
-                  <img 
+                  <Image 
                     src={avatar.path} 
                     alt={avatar.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="64px"
+                    className="object-cover"
                   />
                   {/* Glass overlay on image */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>

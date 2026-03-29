@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -32,7 +33,7 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-8 h-8 relative group-hover:scale-110 transition-transform">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]" />
+              <Image src="/logo.png" alt="Logo" fill priority className="object-contain filter drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]" sizes="32px" />
             </div>
             <span className="text-2xl font-black italic tracking-tighter text-primary drop-shadow-[0_0_8px_rgba(0,229,255,0.5)] font-headline uppercase leading-none">
               CYBER-SPORTS
@@ -75,10 +76,13 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
             >
                <div className={cn("w-full h-full flex items-center justify-center transition-colors shadow-inner relative overflow-hidden", !selectedAvatar.path && selectedAvatar.bg, "group-hover/avatar:bg-primary/20")}>
                   {selectedAvatar.path ? (
-                    <img 
+                    <Image 
                       src={selectedAvatar.path} 
                       alt={selectedAvatar.name}
-                      className="w-full h-full object-cover transition-transform group-hover/avatar:scale-110"
+                      fill
+                      priority
+                      sizes="40px"
+                      className="object-cover transition-transform group-hover/avatar:scale-110"
                     />
                   ) : selectedAvatar.icon ? (
                     (() => {
@@ -126,10 +130,10 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-3 group"
             >
-              <div className="w-10 h-10 rounded-full bg-surface-container-highest border border-primary/20 p-0.5 overflow-hidden hex-clip transition-colors group-hover:bg-primary/10 group-hover:border-primary/50">
-                 <div className={cn("w-full h-full flex items-center justify-center shadow-inner", !selectedAvatar.path && selectedAvatar.bg)}>
+              <div className="w-10 h-10 rounded-full bg-surface-container-highest border border-primary/20 p-0.5 overflow-hidden hex-clip transition-colors group-hover:bg-primary/10 group-hover:border-primary/50 relative">
+                 <div className={cn("w-full h-full flex items-center justify-center shadow-inner relative overflow-hidden", !selectedAvatar.path && selectedAvatar.bg)}>
                     {selectedAvatar.path ? (
-                      <img src={selectedAvatar.path} alt={selectedAvatar.name} className="w-full h-full object-cover" />
+                      <Image src={selectedAvatar.path} alt={selectedAvatar.name} fill sizes="40px" className="object-cover" />
                     ) : selectedAvatar.icon ? (
                       (() => {
                         const Icon = selectedAvatar.icon;

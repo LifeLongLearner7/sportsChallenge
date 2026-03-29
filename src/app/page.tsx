@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Bot, Zap } from "lucide-react";
 import AuthPortal from "@/components/AuthPortal";
 import LandingHero from "@/components/LandingHero";
@@ -12,7 +13,7 @@ export default async function LandingPage() {
       {/* Centered Brand Signature */}
       <div className="relative w-full z-50 flex flex-col items-center pt-10 pb-2 gap-4">
         <div className="w-20 h-20 relative animate-pulse">
-           <img src="/logo.png" alt="Cyber Sports Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_15px_rgba(0,229,255,0.6)]" />
+           <Image src="/logo.png" alt="Cyber Sports Logo" fill priority className="object-contain filter drop-shadow-[0_0_15px_rgba(0,229,255,0.6)]" sizes="(max-width: 768px) 80px, 80px" />
         </div>
         <div className="text-4xl md:text-6xl font-black italic tracking-tighter text-primary drop-shadow-[0_0_15px_rgba(0,229,255,0.4)] font-headline uppercase select-none">
           CYBER-SPORTS

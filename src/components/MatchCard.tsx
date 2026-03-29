@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Calendar, MapPin, Trophy, Bot } from "lucide-react";
 import { Match } from "@/types";
@@ -73,7 +74,7 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture }
               !TEAM_LOGOS[match.team_a] && "bg-surface-container-highest"
             )}>
                {TEAM_LOGOS[match.team_a] ? (
-                 <img src={TEAM_LOGOS[match.team_a]} className="w-full h-full object-cover" alt={match.team_a} />
+                 <Image src={TEAM_LOGOS[match.team_a]} fill sizes="64px" className="object-cover" alt={match.team_a} />
                ) : (
                  <span className="text-xl font-black text-white">{match.team_a[0]}</span>
                )}
@@ -95,7 +96,7 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture }
               !TEAM_LOGOS[match.team_b] && "bg-surface-container-highest"
             )}>
                {TEAM_LOGOS[match.team_b] ? (
-                 <img src={TEAM_LOGOS[match.team_b]} className="w-full h-full object-cover" alt={match.team_b} />
+                 <Image src={TEAM_LOGOS[match.team_b]} fill sizes="64px" className="object-cover" alt={match.team_b} />
                ) : (
                  <span className="text-xl font-black text-white">{match.team_b[0]}</span>
                )}

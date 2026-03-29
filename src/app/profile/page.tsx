@@ -1,4 +1,5 @@
 import { User, Shield, Zap, Trophy } from "lucide-react";
+import Image from "next/image";
 import { getUserProfile } from "@/lib/data-actions";
 import { AVATARS } from "@/lib/constants";
 import { clsx, type ClassValue } from "clsx";
@@ -35,7 +36,7 @@ export default async function ProfilePage() {
         <div className="w-32 h-32 bg-surface-container-highest rounded-full border-4 border-primary/20 p-1 flex items-center justify-center hex-clip overflow-hidden relative">
            <div className={cn("w-full h-full flex items-center justify-center relative z-10", !selectedAvatar.path && selectedAvatar.bg)}>
              {selectedAvatar.path ? (
-                <img src={selectedAvatar.path} className="w-full h-full object-cover" alt="User" />
+                <Image src={selectedAvatar.path} fill sizes="128px" className="object-cover" alt="User" />
              ) : selectedAvatar.icon ? (
                 (() => {
                   const Icon = selectedAvatar.icon;
