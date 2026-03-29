@@ -6,7 +6,7 @@ export interface Match {
   team_b_logo?: string;
   match_time: string;
   venue?: string;
-  status: "upcoming" | "live" | "completed";
+  status: "upcoming" | "live" | "completed" | "active";
   sport?: string;
   tournament?: string;
   ai_prediction?: string;

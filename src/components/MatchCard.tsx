@@ -18,7 +18,7 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture }
   const [formattedDate, setFormattedDate] = useState<string>("");
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isLocked, setIsLocked] = useState(false);
-  const isUpcoming = match.status === "upcoming";
+  const isUpcoming = match.status === "upcoming" || match.status === "active";
   const hasPredicted = !!userPrediction;
 
   useEffect(() => {
@@ -85,7 +85,12 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture }
 
           <div className="flex flex-col items-center gap-1 group/vs">
             <span className="text-2xl font-black italic text-primary/30 group-hover/vs:text-primary transition-colors duration-500">VS</span>
-            <div className="px-3 py-1 bg-surface-container-highest rounded-full text-[8px] font-black text-secondary border border-secondary/20 uppercase tracking-[0.2em]">
+            <div className={cn(
+               "px-3 py-1 rounded-full text-[8px] font-black border uppercase tracking-[0.2em] transition-all duration-500",
+               match.status === "active" 
+                 ? "bg-primary/20 text-primary border-primary/40 shadow-[0_0_10px_rgba(129,236,255,0.2)]" 
+                 : "bg-surface-container-highest text-secondary border-secondary/20"
+            )}>
               {match.status}
             </div>
           </div>

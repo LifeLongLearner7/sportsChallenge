@@ -1,9 +1,10 @@
 import { User, Shield, Zap, Trophy } from "lucide-react";
 import Image from "next/image";
-import { getUserProfile } from "@/lib/data-actions";
+import { getUserProfile, getUserDetailedHistory } from "@/lib/data-actions";
 import { AVATARS } from "@/lib/constants";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import DossierHistory from "@/components/DossierHistory";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -11,6 +12,11 @@ function cn(...inputs: ClassValue[]) {
 
 export default async function ProfilePage() {
   const profile = await getUserProfile();
+  
+  if (!profile) return null;
+
+  // Fetch the last 10 predictions with match details
+  const history = await getUserDetailedHistory(profile.id, 10);
   
   // Find the selected avatar icon
   const selectedAvatar = AVATARS.find(a => a.id === profile?.avatar_url) || AVATARS[0];
@@ -76,10 +82,15 @@ export default async function ProfilePage() {
       </div>
 
       <div className="glass-panel p-8 rounded-3xl flex flex-col gap-6">
-         <h2 className="font-headline text-2xl font-black text-white uppercase italic">Strategic Dossier</h2>
-         <div className="h-[200px] w-full bg-black/40 rounded-xl border border-white/5 flex items-center justify-center">
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">History visualization loading...</span>
+         <div className="flex items-center justify-between">
+            <h2 className="font-headline text-2xl font-black text-white uppercase italic">Strategic Dossier</h2>
+            <div className="flex items-center gap-2">
+               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Neural Link Sync: Active</span>
+            </div>
          </div>
+         
+         <DossierHistory history={history as any} />
       </div>
     </div>
   );

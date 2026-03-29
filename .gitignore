@@ -40,3 +40,4 @@ next-env.d.ts
 # scratch scripts and research tools
 /research_vault
 /tmp
+seed_full_ipl_2026.mjs

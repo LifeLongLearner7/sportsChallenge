@@ -20,16 +20,19 @@ async function requireAdmin() {
   return user;
 }
 
-export async function getMatches() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("matches")
-    .select("*")
-    .order("match_time", { ascending: true });
+export const getMatches = unstable_cache(
+  async () => {
+    const { data, error } = await staticSupabase
+      .from("matches")
+      .select("*")
+      .order("match_time", { ascending: true });
 
-  if (error) throw error;
-  return data as Match[];
-}
+    if (error) throw error;
+    return data as Match[];
+  },
+  ["all-matches"],
+  { revalidate: 300 }
+);
 
 export async function getUserProfile() {
   const supabase = await createClient();
@@ -52,17 +55,18 @@ export async function getUserProfile() {
       matches_predicted: 0,
       accuracy: 0,
       is_admin: false,
-      rank: 999
-    } as Profile & { rank: number };
+    } as Profile;
   }
 
-  // Calculate Rank
-  const { count } = await supabase
+  return profile as Profile;
+}
+
+export async function getUserTacticalRank(points: number = 0) {
+  const { count } = await staticSupabase
     .from("profiles")
     .select("*", { count: 'exact', head: true })
-    .gt("points", profile.points || 0);
-
-  return { ...profile, rank: (count || 0) + 1 } as Profile & { rank: number };
+    .gt("points", points);
+  return (count || 0) + 1;
 }
 
 export const getLeaderboardStats = unstable_cache(
@@ -107,6 +111,27 @@ export async function getUserPredictions() {
 
   if (error) return [];
   return data as Prediction[];
+}
+
+export async function getUserDetailedHistory(userId: string, limit = 10) {
+  return unstable_cache(
+    async (id: string, l: number) => {
+      const { data, error } = await staticSupabase
+        .from("predictions")
+        .select(`
+          *,
+          matches (*)
+        `)
+        .eq("user_id", id)
+        .order("created_at", { ascending: false })
+        .limit(l);
+
+      if (error) return [];
+      return data;
+    },
+    [`user-history-${userId}`],
+    { revalidate: 3600 }
+  )(userId, limit);
 }
 
 export async function submitPrediction(matchId: string, predictedWinner: string) {
@@ -229,30 +254,36 @@ export const getLandingStats = unstable_cache(
 );
 
 
-export async function getLeaderboard(limit = 10) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .order("points", { ascending: false })
-    .limit(limit);
+export const getLeaderboard = unstable_cache(
+  async (limit = 10) => {
+    const { data, error } = await staticSupabase
+      .from("profiles")
+      .select("*")
+      .order("points", { ascending: false })
+      .limit(limit);
 
-  if (error) return [];
-  return data as Profile[];
-}
+    if (error) return [];
+    return data as Profile[];
+  },
+  ["leaderboard-list"],
+  { revalidate: 300 }
+);
 
 // Arena Data Actions
-export async function getCompletedMatches() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("matches")
-    .select("*")
-    .eq("status", "completed")
-    .order("match_time", { ascending: false });
+export const getCompletedMatches = unstable_cache(
+  async () => {
+    const { data, error } = await staticSupabase
+      .from("matches")
+      .select("*")
+      .eq("status", "completed")
+      .order("match_time", { ascending: false });
 
-  if (error) throw error;
-  return data as Match[];
-}
+    if (error) throw error;
+    return data as Match[];
+  },
+  ["completed-matches"],
+  { revalidate: 300 }
+);
 
 export async function getArenaStats() {
   const stats = await getGlobalStats();
@@ -260,29 +291,40 @@ export async function getArenaStats() {
 }
 
 // Tactical Comm-Link (Discussion) Actions
-export async function getArenaMessages() {
-  const supabase = await createClient();
-  
-  // 1. Automatic 24-hour Purge
-  const internalExp = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  await supabase
-    .from("arena_messages")
-    .delete()
-    .lt("created_at", internalExp);
+const purgeOldMessages = unstable_cache(
+  async () => {
+    const internalExp = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    await staticSupabase
+      .from("arena_messages")
+      .delete()
+      .lt("created_at", internalExp);
+    return Date.now();
+  },
+  ["purge-arena-messages"],
+  { revalidate: 21600 } // 6 hours
+);
 
-  // 2. Fetch Fresh Feed
-  const { data, error } = await supabase
-    .from("arena_messages")
-    .select(`
-      *,
-      profiles (screen_name, avatar_url)
-    `)
-    .order("created_at", { ascending: true })
-    .limit(100);
+export const getArenaMessages = unstable_cache(
+  async () => {
+    // 1. Automatic 24-hour Purge (Runs once every 6 hours via dedicated cache)
+    await purgeOldMessages();
 
-  if (error) return [];
-  return data;
-}
+    // 2. Fetch Fresh Feed
+    const { data, error } = await staticSupabase
+      .from("arena_messages")
+      .select(`
+        *,
+        profiles (screen_name, avatar_url)
+      `)
+      .order("created_at", { ascending: true })
+      .limit(100);
+
+    if (error) return [];
+    return data;
+  },
+  ["arena-messages"],
+  { revalidate: 60 } // Real-time client subscription handles fresh messages seamlessly
+);
 
 export async function sendArenaMessage(content: string) {
   const supabase = await createClient();

@@ -57,6 +57,51 @@ export async function generateMatchPrediction(match: Match) {
 }
 
 /**
+ * THE STATUS SYNC (01:00 AM IST)
+ * Transitions today's matches from 'upcoming' to 'active'.
+ */
+export async function systemStatusSync() {
+  const supabase = await createClient();
+  const now = new Date();
+  
+  // Get start and end of "today" in system local/UTC
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+
+  console.log(`Strategic Pulse: Activating fixtures between ${startOfDay} and ${endOfDay}...`);
+
+  const { data: todayMatches, error } = await supabase
+    .from("matches")
+    .select("id, status, team_a, team_b")
+    .eq("status", "upcoming")
+    .gte("match_time", startOfDay)
+    .lte("match_time", endOfDay);
+
+  if (error) {
+    console.error("Pulse Failure: Status Sync failed:", error);
+    return { success: false, error };
+  }
+
+  if (todayMatches && todayMatches.length > 0) {
+    const ids = todayMatches.map(m => m.id);
+    const { error: updateError } = await supabase
+      .from("matches")
+      .update({ status: "active" })
+      .in("id", ids);
+
+    if (updateError) {
+      console.error("Pulse Failure: Database Constraint Violation?", updateError);
+      return { success: false, error: updateError };
+    }
+
+    console.log(`Strategic Pulse: Matches marked as ACTIVE: ${todayMatches.map(m => `${m.team_a} vs ${m.team_b}`).join(", ")}`);
+  }
+
+  revalidatePath("/dashboard");
+  return { success: true, count: todayMatches?.length || 0 };
+}
+
+/**
  * THE RESULT PULSE (02:00 AM IST)
  * Synchronizes real match results and processes player scoring.
  */
@@ -162,8 +207,9 @@ export async function systemPredictionSync() {
  * Combined Sync (for manual administration)
  */
 export async function systemAutomatedSync() {
-  await systemResultSync();
-  await systemPredictionSync();
+  await systemStatusSync(); // 01:00 AM Logic
+  await systemResultSync(); // 02:00 AM Logic
+  await systemPredictionSync(); // 03:00 AM Logic
   return { success: true, mode: "full_sync" };
 }
 
