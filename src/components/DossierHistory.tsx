@@ -1,5 +1,6 @@
 import { Prediction, Match } from "@/types";
 import { CheckCircle2, XCircle, BrainCircuit, Zap, AlertTriangle } from "lucide-react";
+import { getUserDetailedHistory } from "@/lib/data-actions";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -12,10 +13,12 @@ interface DetailedPrediction extends Prediction {
 }
 
 interface DossierHistoryProps {
-  history: DetailedPrediction[];
+  userId: string;
+  limit?: number;
 }
 
-export default function DossierHistory({ history }: DossierHistoryProps) {
+export default async function DossierHistory({ userId, limit = 10 }: DossierHistoryProps) {
+  const history = await getUserDetailedHistory(userId, limit) as unknown as DetailedPrediction[];
   if (!history || history.length === 0) {
     return (
       <div className="h-[200px] w-full bg-black/20 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-4">

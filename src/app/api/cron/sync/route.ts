@@ -1,4 +1,4 @@
-import { systemPredictionSync } from "@/lib/ai-actions";
+import { systemAutomatedSync } from "@/lib/ai-actions";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -8,8 +8,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    console.log("Vercel Cron: Initiating 03:00 AM Tactical Prediction Pulse...");
-    const result = await systemPredictionSync();
+    console.log("Vercel Cron: Initiating Full Automated System Sync...");
+    const result = await systemAutomatedSync();
     
     return NextResponse.json({ 
       success: true, 
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     console.error("Vercel Cron Failure:", error);
     return NextResponse.json({ 
       success: false, 
-      error: "Neural link disconnection during prediction sync." 
+      error: "Neural link disconnection during system automated sync." 
     }, { status: 500 });
   }
 }

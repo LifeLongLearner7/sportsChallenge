@@ -31,7 +31,7 @@ export const getMatches = unstable_cache(
     return data as Match[];
   },
   ["all-matches"],
-  { revalidate: 300 }
+  { revalidate: 7200 }
 );
 
 export async function getUserProfile() {
@@ -113,26 +113,24 @@ export async function getUserPredictions() {
   return data as Prediction[];
 }
 
-export async function getUserDetailedHistory(userId: string, limit = 10) {
-  return unstable_cache(
-    async (id: string, l: number) => {
-      const { data, error } = await staticSupabase
-        .from("predictions")
-        .select(`
-          *,
-          matches (*)
-        `)
-        .eq("user_id", id)
-        .order("created_at", { ascending: false })
-        .limit(l);
+export const getUserDetailedHistory = unstable_cache(
+  async (userId: string, limit = 10) => {
+    const { data, error } = await staticSupabase
+      .from("predictions")
+      .select(`
+        *,
+        matches (*)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-      if (error) return [];
-      return data;
-    },
-    [`user-history-${userId}`],
-    { revalidate: 3600 }
-  )(userId, limit);
-}
+    if (error) return [];
+    return data;
+  },
+  ["user-detailed-history"],
+  { revalidate: 3600 }
+);
 
 export async function submitPrediction(matchId: string, predictedWinner: string) {
   const supabase = await createClient();
@@ -266,7 +264,7 @@ export const getLeaderboard = unstable_cache(
     return data as Profile[];
   },
   ["leaderboard-list"],
-  { revalidate: 300 }
+  { revalidate: 7200 }
 );
 
 export async function getUserRank(userId: string) {

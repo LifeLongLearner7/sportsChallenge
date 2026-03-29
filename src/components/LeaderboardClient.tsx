@@ -5,10 +5,12 @@ import Image from "next/image";
 import { Trophy, TrendingUp } from "lucide-react";
 import { Profile } from "@/types";
 import { ALL_IDENTITIES } from "@/lib/constants";
+import { useEffect, useState } from "react";
+import { getUserTacticalRank } from "@/lib/data-actions";
 
 interface LeaderboardClientProps {
   rankers: Profile[];
-  currentUserProfile: (Profile & { rank: number }) | null;
+  currentUserProfile: Profile | null;
   globalStats: {
     activeNodes: string;
     meanAccuracy: string;
@@ -19,6 +21,13 @@ interface LeaderboardClientProps {
 export default function LeaderboardClient({ rankers, currentUserProfile, globalStats }: LeaderboardClientProps) {
   const [gold, silver, bronze] = rankers.slice(0, 3);
   const others = rankers.slice(3);
+  const [tacticalRank, setTacticalRank] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (currentUserProfile) {
+      getUserTacticalRank(currentUserProfile.points).then(setTacticalRank);
+    }
+  }, [currentUserProfile]);
 
   const getAvatar = (id: string | null | undefined) => {
     return ALL_IDENTITIES.find(a => id && a.id === id) || ALL_IDENTITIES[0];
@@ -26,7 +35,7 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
 
   return (
     <main className="min-h-screen pt-32 pb-20 bg-background relative overflow-hidden">
-      <Navbar isAdmin={currentUserProfile?.is_admin} />
+      <Navbar isAdmin={currentUserProfile?.is_admin} profile={currentUserProfile} />
       
       {/* Background Glows */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[140px] pointer-events-none"></div>
@@ -195,13 +204,20 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
             { label: "Active Nodes", value: globalStats.activeNodes, color: "text-white" },
             { label: "Mean Accuracy", value: globalStats.meanAccuracy, color: "text-primary" },
             { label: "Human Dominance", value: globalStats.dominance, color: "text-secondary" },
-            { label: "Tactical Rank", value: currentUserProfile ? `#${currentUserProfile.rank}` : "N/A", color: "text-tertiary" },
           ].map((stat) => (
             <div key={stat.label} className="glass-panel p-8 rounded-3xl flex flex-col gap-3 border-white/5 hover:border-white/10 transition-colors shadow-xl">
               <div className="text-[9px] font-black text-slate-500 tracking-[0.3em] uppercase">{stat.label}</div>
               <div className={`text-4xl font-headline font-black ${stat.color} italic tracking-tighter`}>{stat.value}</div>
             </div>
           ))}
+
+          {/* Tactical Rank Card (Async) */}
+          <div className="glass-panel p-8 rounded-3xl flex flex-col gap-3 border-white/5 hover:border-white/10 transition-colors shadow-xl">
+            <div className="text-[9px] font-black text-slate-500 tracking-[0.3em] uppercase">Tactical Rank</div>
+            <div className="text-4xl font-headline font-black text-tertiary italic tracking-tighter">
+              {currentUserProfile ? (tacticalRank ? `#${tacticalRank}` : <span className="animate-pulse">#_</span>) : "N/A"}
+            </div>
+          </div>
         </div>
       </div>
     </main>

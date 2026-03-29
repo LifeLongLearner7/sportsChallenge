@@ -173,14 +173,17 @@ export async function systemPredictionSync() {
   const supabase = await createClient();
   const now = new Date();
 
-  console.log(`Strategic Pulse: Initiating AI Tactical Prediction Sync...`);
+  console.log(`Strategic Pulse: Initiating AI Tactical Prediction Sync (48H Lookahead)...`);
+
+  const lookaheadWindow = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
   const { data: upcomingWithoutPredictions } = await supabase
     .from("matches")
     .select("*")
     .gte("match_time", now.toISOString())
+    .lte("match_time", lookaheadWindow)
     .is("ai_prediction", null)
-    .limit(5); // Process in small batches if needed
+    .limit(3); // Process in tight batches
 
   if (upcomingWithoutPredictions && upcomingWithoutPredictions.length > 0) {
     for (const match of upcomingWithoutPredictions) {

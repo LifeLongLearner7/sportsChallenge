@@ -6,6 +6,8 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import DossierHistory from "@/components/DossierHistory";
 
+import { Suspense } from "react";
+
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -14,9 +16,6 @@ export default async function ProfilePage() {
   const profile = await getUserProfile();
   
   if (!profile) return null;
-
-  // Fetch the last 10 predictions with match details
-  const history = await getUserDetailedHistory(profile.id, 10);
   
   // Find the selected avatar icon
   const selectedAvatar = AVATARS.find(a => a.id === profile?.avatar_url) || AVATARS[0];
@@ -90,7 +89,13 @@ export default async function ProfilePage() {
             </div>
          </div>
          
-         <DossierHistory history={history as any} />
+         <Suspense fallback={
+            <div className="h-[200px] w-full bg-black/40 rounded-xl border border-white/5 flex items-center justify-center">
+               <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest animate-pulse">History visualization loading...</span>
+            </div>
+         }>
+            <DossierHistory userId={profile.id} limit={10} />
+         </Suspense>
       </div>
     </div>
   );
