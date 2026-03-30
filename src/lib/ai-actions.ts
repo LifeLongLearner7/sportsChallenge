@@ -23,7 +23,7 @@ export async function generateMatchPrediction(match: Match) {
   }
 
   const prompt = `
-    You are 'ANTIGRAVITY-CORE', a high-fidelity sports analysis AI designed for the IPL 2026 season.
+    You are 'SPORTS-AI-CORE', a high-fidelity sports analysis AI designed for the IPL 2026 season.
     Task: Predict the winning likelihood and provide strategic reasoning for the following T20 fixture.
     
     Match Information:
@@ -32,12 +32,12 @@ export async function generateMatchPrediction(match: Match) {
     Date: ${new Date(match.match_time).toLocaleDateString()}
     
     Format Requirements:
-    - winner: Must be exactly "team_a" or "team_b"
+    - winner: Must be exactly ${match.team_a} or ${match.team_b}
     - confidence: An integer between 50 and 99
     - reasoning: A technical, data-driven strategic insight (Exactly 130-150 characters)
     
     Return ONLY a raw JSON object. No markdown, no prose.
-    Example: {"winner": "team_a", "confidence": 78, "reasoning": "RCB's middle order stability on high scoring Bengaluru surfaces gives them a 14% higher operational efficiency than SRH's current pace attack."}
+    Example: {"winner": "RCB", "confidence": 78, "reasoning": "RCB's middle order stability on high scoring Bengaluru surfaces gives them a 14% higher operational efficiency than SRH's current pace attack."}
   `;
 
   try {
@@ -188,16 +188,28 @@ export async function systemPredictionSync() {
   if (upcomingWithoutPredictions && upcomingWithoutPredictions.length > 0) {
     for (const match of upcomingWithoutPredictions) {
        const prediction = await generateMatchPrediction(match);
-       if (prediction && (prediction.winner === "team_a" || prediction.winner === "team_b")) {
-         const actualAiPick = prediction.winner === "team_a" ? match.team_a : match.team_b;
-         await supabase
-           .from("matches")
-           .update({
-             ai_prediction: actualAiPick,
-             ai_confidence: prediction.confidence,
-             ai_reasoning: prediction.reasoning
-           })
-           .eq("id", match.id);
+       if (prediction?.winner) {
+         const winner = prediction.winner.toLowerCase().trim();
+         const teamA = match.team_a.toLowerCase().trim();
+         const teamB = match.team_b.toLowerCase().trim();
+
+         let actualAiPick = null;
+         if (winner === "team_a" || winner === teamA) {
+           actualAiPick = match.team_a;
+         } else if (winner === "team_b" || winner === teamB) {
+           actualAiPick = match.team_b;
+         }
+
+         if (actualAiPick) {
+           await supabase
+             .from("matches")
+             .update({
+               ai_prediction: actualAiPick,
+               ai_confidence: prediction.confidence,
+               ai_reasoning: prediction.reasoning
+             })
+             .eq("id", match.id);
+         }
        }
     }
   }
