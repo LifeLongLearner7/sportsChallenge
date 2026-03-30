@@ -35,12 +35,13 @@ interface AdminClientProps {
     };
   };
   completedMatches?: Match[];
+  totalUsers: number;
 }
 
 
 import { useRouter } from "next/navigation";
 
-export default function AdminClient({ profile, analytics, completedMatches = [] }: AdminClientProps) {
+export default function AdminClient({ profile, analytics, completedMatches = [], totalUsers }: AdminClientProps) {
 
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -143,7 +144,7 @@ export default function AdminClient({ profile, analytics, completedMatches = [] 
            <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
               <div className="flex flex-col">
                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Active Strategists</span>
-                 <span className="text-xl font-headline font-black text-white italic">1,248</span>
+                 <span className="text-xl font-headline font-black text-white italic">{totalUsers.toLocaleString()}</span>
               </div>
               <div className="w-px h-8 bg-white/10"></div>
               <div className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity" onClick={() => router.push("/admin/matches")}>

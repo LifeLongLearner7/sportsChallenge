@@ -162,7 +162,7 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
 
                   <div className="text-right">
                     <p className="text-sm font-mono text-white/60">
-                      {new Date(match.match_time).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(match.match_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                     <p className="text-[10px] text-emerald-400 font-mono uppercase tracking-widest flex items-center justify-end gap-1">
                       <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />

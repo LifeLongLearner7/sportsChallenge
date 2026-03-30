@@ -69,34 +69,71 @@ export async function getUserTacticalRank(points: number = 0) {
   return (count || 0) + 1;
 }
 
-export const getLeaderboardStats = unstable_cache(
+/**
+ * UNIFIED PLATFORM STATS (Phase 2.2 — Single Scan)
+ * Replaces the two separate getLeaderboardStats + getGlobalStats functions
+ * that each independently scanned the profiles table.
+ *
+ * NOW: One cached function, one DB scan, two derived shape-exports.
+ */
+export const getPlatformStats = unstable_cache(
   async () => {
-    // 1. Total Nodes (Strategists)
-    const { count: activeNodes } = await staticSupabase
-      .from("profiles")
-      .select("*", { count: 'exact', head: true });
+    // Single parallel fetch for all needed columns
+    const [profilesResult, aiResult, totalCountResult] = await Promise.all([
+      staticSupabase.from("profiles").select("accuracy, points"),
+      staticSupabase.from("matches").select("ai_confidence"),
+      staticSupabase.from("profiles").select("*", { count: 'exact', head: true }),
+    ]);
 
-    // 2. Mean Accuracy
-    const { data: accuracyData } = await staticSupabase
-      .from("profiles")
-      .select("accuracy");
+    const profiles = profilesResult.data || [];
+    const aiMatches = aiResult.data || [];
+    const totalCount = totalCountResult.count || 0;
 
-    const avgAccuracy = accuracyData?.length 
-      ? accuracyData.reduce((acc, p) => acc + (p.accuracy || 0), 0) / accuracyData.length 
+    // Derived stats
+    const avgAccuracy = profiles.length
+      ? profiles.reduce((acc, p) => acc + (p.accuracy || 0), 0) / profiles.length
       : 0;
 
-    // 3. Human Dominance (Vs 50% baseline)
+    const avgAiAccuracy = aiMatches.length
+      ? aiMatches.reduce((acc, m) => acc + (m.ai_confidence || 0), 0) / aiMatches.length
+      : 72.5;
+
     const dominance = avgAccuracy - 50;
 
     return {
-      activeNodes: activeNodes?.toLocaleString() || "0",
+      // Shape used by DashboardClient + ArenaClient
+      userCount: totalCount,
+      avgHumanAccuracy: Math.round(avgAccuracy * 10) / 10,
+      avgAiAccuracy: Math.round(avgAiAccuracy * 10) / 10,
+      // Shape used by LeaderboardClient
+      activeNodes: totalCount.toLocaleString(),
       meanAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1) + "%",
-      dominance: (dominance > 0 ? "+" : "") + (Math.round(dominance * 10) / 10).toFixed(1) + "%"
+      dominance: (dominance > 0 ? "+" : "") + (Math.round(dominance * 10) / 10).toFixed(1) + "%",
     };
   },
-  ["leaderboard-stats"],
+  ["platform-stats"],
   { revalidate: 28800 }
 );
+
+/** Backwards-compatible: Leaderboard page expects this shape */
+export const getLeaderboardStats = async () => {
+  const stats = await getPlatformStats();
+  return {
+    activeNodes: stats.activeNodes,
+    meanAccuracy: stats.meanAccuracy,
+    dominance: stats.dominance,
+  };
+};
+
+/** Backwards-compatible: Dashboard page expects this shape */
+export const getGlobalStats = async () => {
+  const stats = await getPlatformStats();
+  return {
+    userCount: stats.userCount,
+    avgHumanAccuracy: stats.avgHumanAccuracy,
+    avgAiAccuracy: stats.avgAiAccuracy,
+  };
+};
 
 export const getTotalStrategists = unstable_cache(
   async () => {
@@ -139,8 +176,9 @@ export const getUserDetailedHistory = unstable_cache(
     if (error) return [];
     return data;
   },
-  ["user-detailed-history"],
-  { revalidate: 3600 }
+  ["user-detailed-history"], // Next.js appends the arguments to the key parts automatically in most cases, 
+                             // but to be explicit and safe for user-specific data: 
+  { revalidate: 3600, tags: ["user-history"] }
 );
 
 export async function submitPrediction(matchId: string, predictedWinner: string) {
@@ -182,40 +220,7 @@ export async function updateProfile(updates: Partial<Profile>) {
   return { success: true };
 }
 
-export const getGlobalStats = unstable_cache(
-  async () => {
-    // 1. Total User Count
-    const { count: userCount } = await staticSupabase
-      .from("profiles")
-      .select("*", { count: 'exact', head: true });
 
-    // 2. Average Human Accuracy
-    const { data: humanAccData } = await staticSupabase
-      .from("profiles")
-      .select("accuracy");
-    
-    // 3. Average AI Core Accuracy (from matches)
-    const { data: aiAccData } = await staticSupabase
-      .from("matches")
-      .select("ai_confidence");
-
-    const avgHumanAccuracy = humanAccData?.length 
-      ? humanAccData.reduce((acc, p) => acc + (p.accuracy || 0), 0) / humanAccData.length 
-      : 0;
-
-    const avgAiAccuracy = aiAccData?.length 
-      ? aiAccData.reduce((acc, m) => acc + (m.ai_confidence || 0), 0) / aiAccData.length 
-      : 72.5; // Baseline if no AI matches
-
-    return {
-      userCount: userCount || 0,
-      avgHumanAccuracy: Math.round(avgHumanAccuracy * 10) / 10,
-      avgAiAccuracy: Math.round(avgAiAccuracy * 10) / 10,
-    };
-  },
-  ["global-stats"],
-  { revalidate: 28800 }
-);
 
 export const getLandingStats = unstable_cache(
   async () => {

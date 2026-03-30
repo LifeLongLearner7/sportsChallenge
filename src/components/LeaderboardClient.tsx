@@ -6,13 +6,7 @@ import { Trophy, TrendingUp } from "lucide-react";
 import { Profile } from "@/types";
 import { ALL_IDENTITIES } from "@/lib/constants";
 import { useEffect, useState } from "react";
-import { getUserTacticalRank } from "@/lib/data-actions";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from "@/lib/utils";
 
 import { 
   calculateTier, 

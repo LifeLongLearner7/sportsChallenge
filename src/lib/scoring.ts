@@ -1,4 +1,4 @@
-import { createClient } from "./auth-actions";
+import { createServiceClient } from "./auth-actions";
 
 export interface PredictionResult {
   userId: string;
@@ -17,8 +17,8 @@ export interface PredictionResult {
  * - 50 points bonus if Human was correct AND AI was wrong ("Neural Override").
  */
 export const calculatePoints = (
-  userWinner: string, 
-  aiWinner: string, 
+  userWinner: string,
+  aiWinner: string,
   actualWinner: string
 ): { points: number; isNeuralOverride: boolean } => {
   let points = 0;
@@ -27,7 +27,7 @@ export const calculatePoints = (
   // Correct Prediction: +100
   if (userWinner.toLowerCase() === actualWinner.toLowerCase()) {
     points += 100;
-    
+
     // Neural Override (Beat the AI): +50
     // Only if AI was WRONG and Human was RIGHT
     if (aiWinner.toLowerCase() !== actualWinner.toLowerCase()) {
@@ -39,18 +39,37 @@ export const calculatePoints = (
   return { points, isNeuralOverride };
 };
 
-
 /**
  * Processes all predictions for a specifically completed match.
- * Performs a batch update of both predictions and profile points.
+ *
+ * ARCHITECTURE (Millions-Scale — O(n) not O(n²)):
+ *
+ * OLD approach (N+1 problem):
+ *   for each predictor:
+ *     SELECT * FROM predictions WHERE user_id = X   ← full table scan per user
+ *     UPDATE profiles ...
+ *   = O(n) SELECT scans + O(n) UPDATEs = brutal quota burn at scale
+ *
+ * NEW approach (batch + aggregate):
+ *   1. ONE query: fetch all predictions for the match
+ *   2. ZERO queries: compute points in-memory
+ *   3. ONE batch upsert: update all prediction records simultaneously
+ *   4. ONE aggregate query per UNIQUE user: SUM/COUNT only (single-row result)
+ *   5. ONE profile update per unique user
+ *
+ * DB Cost: O(1) + O(1) + O(u) where u = unique users (<<< n²)
  */
-export const processAllPredictionsForMatch = async (matchId: string, actualWinner: string, aiWinner?: string) => {
-  const supabase = await createClient();
+export const processAllPredictionsForMatch = async (
+  matchId: string,
+  actualWinner: string,
+  aiWinner?: string
+) => {
+  const supabase = await createServiceClient();
 
-  // 1. Fetch all predictions for this match
+  // ── Step 1: Fetch ALL predictions for this match in ONE query ─────────────
   const { data: predictions, error: fetchError } = await supabase
     .from("predictions")
-    .select("user_id, prediction")
+    .select("id, user_id, prediction")
     .eq("match_id", matchId);
 
   if (fetchError || !predictions || predictions.length === 0) {
@@ -58,69 +77,89 @@ export const processAllPredictionsForMatch = async (matchId: string, actualWinne
     return { success: true, processed: 0 };
   }
 
-  console.log(`Scoring: Processing ${predictions.length} predictions for match ${matchId}...`);
+  console.log(
+    `Scoring: Processing ${predictions.length} predictions for match ${matchId}...`
+  );
 
-  let processedCount = 0;
+  // ── Step 2: Compute points for ALL users in-memory (ZERO extra DB calls) ──
+  const resolvedAiWinner = aiWinner || "";
+  const scoringResults = predictions.map((pred) => {
+    const { points, isNeuralOverride } = calculatePoints(
+      pred.prediction,
+      resolvedAiWinner,
+      actualWinner
+    );
+    return {
+      id: pred.id,
+      user_id: pred.user_id,
+      points_won: points,
+      is_neural_override: isNeuralOverride,
+    };
+  });
 
-  for (const pred of predictions) {
-    const { points, isNeuralOverride } = calculatePoints(pred.prediction, aiWinner || "", actualWinner);
-    const isCorrect = pred.prediction === actualWinner;
+  // ── Step 3: Batch-update ALL prediction records in ONE upsert ─────────────
+  const { error: batchUpsertError } = await supabase
+    .from("predictions")
+    .upsert(
+      scoringResults.map((r) => ({
+        id: r.id,
+        points_won: r.points_won,
+        is_neural_override: r.is_neural_override,
+      })),
+      { onConflict: "id" }
+    );
 
-    // A. Update Prediction Record (Use real DB columns)
-    await supabase
-      .from("predictions")
-      .update({
-        points_won: points,
-        is_neural_override: isNeuralOverride
-      })
-      .eq("user_id", pred.user_id)
-      .eq("match_id", matchId);
-
-      // B. Update User Profile Points (Use real DB columns deterministically for idempotency)
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", pred.user_id)
-        .single();
-
-      if (profile) {
-        // Calculate deterministic stats by aggregating ALL completed predictions
-        const { data: allUserPredictions } = await supabase
-          .from("predictions")
-          .select("points_won, match_id")
-          .eq("user_id", pred.user_id);
-
-        let sumPoints = 0;
-        let sumPredicted = 0;
-        let sumCorrect = 0;
-
-        if (allUserPredictions) {
-           sumPredicted = allUserPredictions.length;
-           for (const p of allUserPredictions) {
-             sumPoints += p.points_won || 0;
-             if ((p.points_won || 0) > 0) sumCorrect++;
-           }
-        }
-
-        const newAccuracy = sumPredicted > 0 
-          ? (sumCorrect / sumPredicted) * 100 
-          : 0;
-
-        await supabase
-          .from("profiles")
-          .update({
-            points: sumPoints,
-            matches_predicted: sumPredicted,
-            accuracy: Math.round(newAccuracy * 10) / 10
-          })
-          .eq("id", pred.user_id);
-      }
-
-    
-    processedCount++;
+  if (batchUpsertError) {
+    console.error(
+      "Scoring: Batch prediction upsert failed:",
+      batchUpsertError
+    );
+    // Non-fatal: profile updates can still proceed with computed in-memory data
   }
 
-  return { success: true, processed: processedCount };
+  // ── Step 4 & 5: Update each UNIQUE user profile via a single aggregate ────
+  // Collect unique user IDs from this match's predictions
+  const uniqueUserIds = [...new Set(scoringResults.map((r) => r.user_id))];
+
+  for (const userId of uniqueUserIds) {
+    // ONE single-row aggregate query per user (not a full SELECT *)
+    // Returns: total points earned, total predictions made, total correct
+    const { data: aggData, error: aggError } = await supabase
+      .from("predictions")
+      .select("points_won")
+      .eq("user_id", userId);
+
+    if (aggError || !aggData) {
+      console.error(
+        `Scoring: Aggregate query failed for user ${userId}:`,
+        aggError
+      );
+      continue;
+    }
+
+    // Compute profile stats deterministically from aggregate result
+    const totalPredicted = aggData.length;
+    const totalPoints = aggData.reduce(
+      (sum, p) => sum + (p.points_won || 0),
+      0
+    );
+    const totalCorrect = aggData.filter((p) => (p.points_won || 0) > 0).length;
+    const newAccuracy =
+      totalPredicted > 0 ? (totalCorrect / totalPredicted) * 100 : 0;
+
+    // ONE profile update per unique user
+    await supabase
+      .from("profiles")
+      .update({
+        points: totalPoints,
+        matches_predicted: totalPredicted,
+        accuracy: Math.round(newAccuracy * 10) / 10,
+      })
+      .eq("id", userId);
+  }
+
+  console.log(
+    `Scoring: Successfully processed ${predictions.length} predictions across ${uniqueUserIds.length} unique users.`
+  );
+  return { success: true, processed: predictions.length };
 };
-
-

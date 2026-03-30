@@ -1,7 +1,27 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/**
+ * PROXY (Next.js Edge) — Multi-Layer Security Guard
+ *
+ * Layer 1: Session Refresh (runs on every request)
+ *   — Keeps Supabase JWTs alive by refreshing cookies at the edge.
+ *
+ * Layer 2: Route Protection
+ *   — /admin/**     : Auth required + is_admin === true verified from DB
+ *   — /dashboard, /arena, /leaderboard, /profile/** : Auth required
+ *   — /api/predict/**: Auth required (prevents unauthenticated API abuse)
+ *   — /api/cron/**  : Excluded — protected by CRON_SECRET bearer token
+ *   — /api/auth/**  : Excluded — the auth callback must be reachable
+ */
+
+const PROTECTED_ROUTES = ["/dashboard", "/arena", "/leaderboard", "/profile"];
+const ADMIN_ROUTES = ["/admin"];
+const AUTH_ROUTE = "/";
+
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -17,56 +37,64 @@ export async function proxy(request: NextRequest) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
+          request.cookies.set({ name, value, ...options });
+          response = NextResponse.next({ request: { headers: request.headers } });
+          response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
+          request.cookies.set({ name, value: "", ...options });
+          response = NextResponse.next({ request: { headers: request.headers } });
+          response.cookies.set({ name, value: "", ...options });
         },
       },
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // ── Layer 1: Session Refresh ──────────────────────────────────────────────
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // PROTECTED ROUTES LOGIC
-  const isAuthRoute = request.nextUrl.pathname === "/";
-  const isProtectedRoute = 
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/profile") ||
-    request.nextUrl.pathname.startsWith("/admin");
+  // ── Layer 2a: Admin route guard — auth + DB is_admin check ───────────────
+  const isAdminRoute = ADMIN_ROUTES.some((route) => pathname.startsWith(route));
 
-  if (!user && isProtectedRoute) {
-    return NextResponse.redirect(new URL("/", request.url));
+  if (isAdminRoute) {
+    if (!user) {
+      const redirectUrl = new URL(AUTH_ROUTE, request.url);
+      redirectUrl.searchParams.set("error", "Unauthorized: Neural clearance required.");
+      redirectUrl.hash = "auth";
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // Verify is_admin from the DB — cannot be spoofed from the client
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    return response;
   }
 
+  // ── Layer 2b: Standard protected routes ───────────────────────────────────
+  const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
+  const isApiPredictRoute = pathname.startsWith("/api/predict");
+
+  if ((isProtectedRoute || isApiPredictRoute) && !user) {
+    const redirectUrl = new URL(AUTH_ROUTE, request.url);
+    redirectUrl.searchParams.set("error", "Authentication required.");
+    redirectUrl.hash = "auth";
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // ── Bonus: Redirect authenticated users away from the landing page ─────────
+  const isAuthRoute = pathname === AUTH_ROUTE;
   if (user && isAuthRoute) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
@@ -77,12 +105,12 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * Match all paths EXCEPT:
+     * - _next/static, _next/image (Next.js internals)
+     * - favicon, icons, public assets
+     * - /api/cron/** (protected by CRON_SECRET bearer token)
+     * - /api/auth/** (Supabase auth callback)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|apple-icon|icon|api/cron|api/auth|assets|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

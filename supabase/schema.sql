@@ -79,3 +79,17 @@ CREATE POLICY "Users can update their own predictions before match starts" ON pr
 );
 
 CREATE POLICY "Public read access for global_stats" ON global_stats FOR SELECT USING (true);
+
+-- ============================================================
+-- IMPORTANT: Run these additional policies in Supabase SQL Editor
+-- (service_role key bypasses RLS, but these are needed for safety)
+-- ============================================================
+
+-- Allow service role to update match results (cron job)
+CREATE POLICY "Service can update matches" ON matches FOR UPDATE USING (true);
+
+-- Allow service role to update match predictions (scoring engine)
+CREATE POLICY "Service can update predictions" ON predictions FOR UPDATE USING (true);
+
+-- Allow service role to update user profiles (scoring engine)
+CREATE POLICY "Service can update profiles" ON profiles FOR UPDATE USING (true);

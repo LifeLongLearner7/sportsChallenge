@@ -1,7 +1,7 @@
 "use server";
 
 import OpenAI from "openai";
-import { createClient } from "./auth-actions";
+import { createServiceClient } from "./auth-actions";
 import { Match } from "@/types";
 import { revalidatePath } from "next/cache";
 
@@ -61,7 +61,7 @@ export async function generateMatchPrediction(match: Match) {
  * Transitions today's matches from 'upcoming' to 'active'.
  */
 export async function systemStatusSync() {
-  const supabase = await createClient();
+  const supabase = await createServiceClient();
   const now = new Date();
   
   // Get start and end of "today" in system local/UTC
@@ -106,7 +106,7 @@ export async function systemStatusSync() {
  * Synchronizes real match results and processes player scoring.
  */
 export async function systemResultSync() {
-  const supabase = await createClient();
+  const supabase = await createServiceClient();
   const now = new Date();
 
   console.log(`Strategic Pulse: Initiating Match Result Sync at ${now.toISOString()}...`);
@@ -170,7 +170,7 @@ export async function systemResultSync() {
  * Generates AI tactical insights for tomorrow's fixtures.
  */
 export async function systemPredictionSync() {
-  const supabase = await createClient();
+  const supabase = await createServiceClient();
   const now = new Date();
 
   console.log(`Strategic Pulse: Initiating AI Tactical Prediction Sync (48H Lookahead)...`);

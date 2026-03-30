@@ -44,16 +44,24 @@ export async function createClient() {
  * Used for admin actions where we want to create a user without logging them in
  * and without affecting the current admin's session.
  */
-export async function createAdminTerminalClient() {
+export async function createServiceClient() {
+  /**
+   * Service-role client: bypasses ALL Supabase RLS policies.
+   * Use ONLY in server-side contexts with no user session:
+   *   - Vercel cron routes (/api/cron/*)
+   *   - Admin operations that need to write to any table
+   *
+   * NEVER expose this client or key to the browser.
+   */
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
-        detectSessionInUrl: false
-      }
+        detectSessionInUrl: false,
+      },
     }
   );
 }
@@ -103,7 +111,7 @@ export async function signIn(formData: FormData) {
 export async function adminSignUp(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const adminClient = await createAdminTerminalClient();
+  const adminClient = await createServiceClient();
 
   // Create user using the stateless admin client
   const { data, error } = await adminClient.auth.signUp({

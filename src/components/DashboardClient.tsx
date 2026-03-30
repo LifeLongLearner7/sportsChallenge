@@ -5,18 +5,15 @@ import { Match, Prediction, Profile } from "@/types";
 import { 
   Trophy, 
   TrendingUp, 
-  Users, 
   Bot, 
   Zap, 
   Globe,
   Command,
   Ghost,
   Activity,
-  ArrowUpRight,
-  ShieldCheck,
-  ZapOff
 } from "lucide-react";
 import MatchCard from "./MatchCard";
+import Navbar from "@/components/Navbar";
 import { submitPrediction } from "@/lib/data-actions";
 import { AVATARS } from "@/lib/constants";
 import Image from "next/image";
@@ -27,12 +24,7 @@ import {
   calculatePulse, 
   getTierColor 
 } from "@/lib/strategist-logic";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from "@/lib/utils";
 
 interface DashboardClientProps {
   initialMatches: Match[];
@@ -103,7 +95,8 @@ export default function DashboardClient({
   const humanLead = globalStats.avgHumanAccuracy - globalStats.avgAiAccuracy;
 
   return (
-    <div className="min-h-screen bg-[#020205] text-slate-200 p-4 md:p-8 font-sans selection:bg-primary/30">
+    <div className="min-h-screen bg-[#020205] text-slate-200 p-4 md:p-8 font-sans selection:bg-primary/30 pt-28">
+      <Navbar isAdmin={profile?.is_admin} profile={profile} />
       <div className="max-w-screen-2xl mx-auto space-y-10">
         
         {/* HUD Header */}
@@ -111,43 +104,50 @@ export default function DashboardClient({
           <div className="space-y-1">
             <h1 className="text-4xl font-black tracking-tighter text-white flex items-center gap-3">
               <Command className="text-primary animate-pulse w-8 h-8" />
-              CYBER_ARENA <span className="text-primary/40 font-mono text-sm tracking-[0.3em] font-normal hidden md:inline ml-2">V2.4.0</span>
+              CYBER-SPORTS <span className="text-primary/40 font-mono text-sm tracking-[0.3em] font-normal hidden md:inline ml-2">V2.4.0</span>
             </h1>
-            <p className="text-slate-500 font-mono text-[10px] uppercase tracking-[0.4em]">Neural Link Status: <span className="text-emerald-400">Synchronized</span></p>
           </div>
 
-          <Link href="/profile" className="group flex items-center gap-4 bg-white/[0.03] border border-white/5 p-2 pr-6 rounded-full hover:bg-white/[0.07] transition-all hover:border-white/10 hover:shadow-[0_0_20px_rgba(255,255,255,0.02)]">
-            <div className="w-10 h-10 rounded-full border border-white/10 p-0.5 hex-clip overflow-hidden relative">
-               {selectedAvatar?.path ? (
-                 <Image src={selectedAvatar.path} fill sizes="40px" className="object-cover" alt="User" />
-               ) : (
-                 <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                   <Ghost size={20} className="text-slate-600" />
-                 </div>
-               )}
-            </div>
-            <div className="text-left">
-              <div className="text-xs font-black tracking-tight text-white">{profile?.screen_name}</div>
-              <div className={cn("text-[8px] font-black uppercase tracking-widest", tier === "NEURAL PRIME" ? "text-purple-400" : "text-primary/60")}>
-                {tier} // RANK #{rank}
-              </div>
-            </div>
-          </Link>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Left Column: Personal Stats */}
           <div className="lg:col-span-3 flex flex-col gap-6">
-            <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group">
+          <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[64px] rounded-full group-hover:bg-primary/10 transition-all" />
               
-              <div className="flex items-center justify-between mb-8">
+              {/* Avatar Section */}
+              <Link href="/profile" className="flex flex-col items-center gap-3 mb-6 group/avatar">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full border-2 border-primary/20 p-0.5 overflow-hidden relative group-hover/avatar:border-primary/50 transition-all">
+                    {selectedAvatar?.path ? (
+                      <Image src={selectedAvatar.path} fill sizes="80px" className="object-cover rounded-full" alt="User avatar" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-800 rounded-full flex items-center justify-center">
+                        <Ghost size={32} className="text-slate-600" />
+                      </div>
+                    )}
+                  </div>
+                  {/* Online pulse ring */}
+                  <span className="absolute bottom-1 right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#020205] shadow-[0_0_6px_#34d399]" />
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-black tracking-tight text-white group-hover/avatar:text-primary transition-colors">
+                    {profile?.screen_name || "Strategist"}
+                  </div>
+                  <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">View Profile →</div>
+                </div>
+              </Link>
+
+              <div className="h-px w-full bg-white/5 mb-5" />
+
+              <div className="flex items-center justify-between mb-6">
                 <div className={cn("px-4 py-1.5 border rounded-full text-[10px] font-black uppercase tracking-widest italic", getTierColor(tier))}>
                   {tier}
                 </div>
                 <div className="bg-white/5 px-3 py-1 rounded-lg border border-white/5 text-[10px] font-mono text-white/40">
-                  LVL_{level.toString().padStart(2, '0')}
+                  LEVEL {level}
                 </div>
               </div>
 

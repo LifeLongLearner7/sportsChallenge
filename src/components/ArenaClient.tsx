@@ -217,7 +217,7 @@ export default function ArenaClient({
 
                                  <div className="flex items-center gap-1.5">
                                     <div className="w-2 h-2 rounded-full bg-primary/50"></div>
-                                    <span className="text-[8px] font-black text-slate-400 uppercase">Con: 82% Correct</span>
+                                    <span className="text-[8px] font-black text-slate-400 uppercase">Con: {globalStats.avgHumanAccuracy}% Human Avg</span>
                                  </div>
                               </div>
                            </div>
