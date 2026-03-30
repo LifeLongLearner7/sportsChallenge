@@ -1,12 +1,15 @@
-import { getMatches, getUserPredictions, getUserProfile, getGlobalStats } from "@/lib/data-actions";
+import { getMatches, getUserPredictions, getUserProfile, getGlobalStats, getTotalStrategists, getUserRank } from "@/lib/data-actions";
 import DashboardClient from "@/components/DashboardClient";
 
 export default async function DashboardPage() {
-  const [matches, predictions, profile, globalStats] = await Promise.all([
+  const profile = await getUserProfile();
+  
+  const [matches, predictions, globalStats, totalUsers, rank] = await Promise.all([
     getMatches(),
     getUserPredictions(),
-    getUserProfile(),
     getGlobalStats(),
+    getTotalStrategists(),
+    profile ? getUserRank(profile.id) : Promise.resolve(0)
   ]);
 
   return (
@@ -15,6 +18,8 @@ export default async function DashboardPage() {
       initialPredictions={predictions} 
       profile={profile} 
       globalStats={globalStats}
+      totalUsers={totalUsers}
+      rank={rank}
     />
   );
 }

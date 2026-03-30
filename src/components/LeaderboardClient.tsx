@@ -7,6 +7,17 @@ import { Profile } from "@/types";
 import { ALL_IDENTITIES } from "@/lib/constants";
 import { useEffect, useState } from "react";
 import { getUserTacticalRank } from "@/lib/data-actions";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+import { 
+  calculateTier, 
+  getTierColor 
+} from "@/lib/strategist-logic";
 
 interface LeaderboardClientProps {
   rankers: Profile[];
@@ -16,18 +27,17 @@ interface LeaderboardClientProps {
     meanAccuracy: string;
     dominance: string;
   };
+  totalUsers: number;
 }
 
-export default function LeaderboardClient({ rankers, currentUserProfile, globalStats }: LeaderboardClientProps) {
+export default function LeaderboardClient({ 
+  rankers, 
+  currentUserProfile, 
+  globalStats, 
+  totalUsers 
+}: LeaderboardClientProps) {
   const [gold, silver, bronze] = rankers.slice(0, 3);
   const others = rankers.slice(3);
-  const [tacticalRank, setTacticalRank] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (currentUserProfile) {
-      getUserTacticalRank(currentUserProfile.points).then(setTacticalRank);
-    }
-  }, [currentUserProfile]);
 
   const getAvatar = (id: string | null | undefined) => {
     return ALL_IDENTITIES.find(a => id && a.id === id) || ALL_IDENTITIES[0];
@@ -70,6 +80,9 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
               </div>
               <div className="text-center">
                 <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{silver.screen_name || "STRATEGIST_" + silver.id.slice(0,4)}</div>
+                <div className={cn("text-[10px] font-black uppercase mb-2", getTierColor(calculateTier(2, totalUsers)))}>
+                  {calculateTier(2, totalUsers)}
+                </div>
                 <div className="text-primary font-bold">{(silver.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
@@ -98,6 +111,9 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
               </div>
               <div className="text-center">
                 <div className="font-black text-white uppercase tracking-tight text-2xl mb-1">{gold.screen_name || "STRATEGIST_" + gold.id.slice(0,4)}</div>
+                <div className={cn("text-[10px] font-black uppercase mb-3", getTierColor(calculateTier(1, totalUsers)))}>
+                  {calculateTier(1, totalUsers)}
+                </div>
                 <div className="text-tertiary font-bold text-lg">{(gold.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
@@ -122,6 +138,9 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
               </div>
               <div className="text-center">
                 <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{bronze.screen_name || "STRATEGIST_" + bronze.id.slice(0,4)}</div>
+                <div className={cn("text-[10px] font-black uppercase mb-2", getTierColor(calculateTier(3, totalUsers)))}>
+                  {calculateTier(3, totalUsers)}
+                </div>
                 <div className="text-primary font-bold">{(bronze.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
@@ -164,7 +183,9 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
                     <div className="font-black text-white uppercase text-base md:text-sm tracking-tight mb-0.5 group-hover:text-primary transition-colors">
                       {ranker.screen_name || "Predictor_" + ranker.id.slice(0,4)}
                     </div>
-                    <div className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em]">ELITE ARCHITECT</div>
+                    <div className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", getTierColor(calculateTier(idx + 4, totalUsers)))}>
+                      {calculateTier(idx + 4, totalUsers)}
+                    </div>
                   </div>
                 </div>
                 
@@ -215,7 +236,7 @@ export default function LeaderboardClient({ rankers, currentUserProfile, globalS
           <div className="glass-panel p-8 rounded-3xl flex flex-col gap-3 border-white/5 hover:border-white/10 transition-colors shadow-xl">
             <div className="text-[9px] font-black text-slate-500 tracking-[0.3em] uppercase">Tactical Rank</div>
             <div className="text-4xl font-headline font-black text-tertiary italic tracking-tighter">
-              {currentUserProfile ? (tacticalRank ? `#${tacticalRank}` : <span className="animate-pulse">#_</span>) : "N/A"}
+              {currentUserProfile ? `#${(currentUserProfile as any).rank}` : "N/A"}
             </div>
           </div>
         </div>

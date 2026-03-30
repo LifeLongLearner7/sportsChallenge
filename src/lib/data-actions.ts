@@ -31,7 +31,7 @@ export const getMatches = unstable_cache(
     return data as Match[];
   },
   ["all-matches"],
-  { revalidate: 7200 }
+  { revalidate: 28800 }
 );
 
 export async function getUserProfile() {
@@ -95,7 +95,18 @@ export const getLeaderboardStats = unstable_cache(
     };
   },
   ["leaderboard-stats"],
-  { revalidate: 7200 }
+  { revalidate: 28800 }
+);
+
+export const getTotalStrategists = unstable_cache(
+  async () => {
+    const { count } = await staticSupabase
+      .from("profiles")
+      .select("*", { count: 'exact', head: true });
+    return count || 0;
+  },
+  ["total-strategists"],
+  { revalidate: 28800 }
 );
 
 export async function getUserPredictions() {
@@ -203,7 +214,7 @@ export const getGlobalStats = unstable_cache(
     };
   },
   ["global-stats"],
-  { revalidate: 7200 }
+  { revalidate: 28800 }
 );
 
 export const getLandingStats = unstable_cache(
@@ -248,7 +259,7 @@ export const getLandingStats = unstable_cache(
     };
   },
   ["landing-stats"],
-  { revalidate: 7200 }
+  { revalidate: 28800 }
 );
 
 
@@ -264,7 +275,7 @@ export const getLeaderboard = unstable_cache(
     return data as Profile[];
   },
   ["leaderboard-list"],
-  { revalidate: 7200 }
+  { revalidate: 28800 }
 );
 
 export const getUserRank = unstable_cache(
@@ -286,7 +297,7 @@ export const getUserRank = unstable_cache(
     return (count || 0) + 1;
   },
   ["user-rank"],
-  { revalidate: 3600 } // Cache user rank for 1 hour
+  { revalidate: 28800 } // Cache user rank for 8 hours
 );
 
 // Arena Data Actions

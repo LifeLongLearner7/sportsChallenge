@@ -1,7 +1,13 @@
 import { User, Shield, Zap, Trophy } from "lucide-react";
 import Image from "next/image";
-import { getUserProfile, getUserDetailedHistory, getUserRank } from "@/lib/data-actions";
+import { getUserProfile, getUserDetailedHistory, getUserRank, getTotalStrategists } from "@/lib/data-actions";
 import { AVATARS } from "@/lib/constants";
+import { 
+  calculateLevel, 
+  calculateTier, 
+  calculatePulse, 
+  getTierColor 
+} from "@/lib/strategist-logic";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import DossierHistory from "@/components/DossierHistory";
@@ -17,8 +23,11 @@ export default async function ProfilePage() {
   
   if (!profile) return null;
 
-  // Parallelize rank fetch if we have a profile
-  const rankPromise = getUserRank(profile.id);
+  // Parallelize rank and global stats fetch
+  const [rank, totalUsers] = await Promise.all([
+    getUserRank(profile.id),
+    getTotalStrategists()
+  ]);
   
   // Find the selected avatar icon
   const selectedAvatar = AVATARS.find(a => a.id === profile?.avatar_url) || AVATARS[0];
@@ -27,16 +36,10 @@ export default async function ProfilePage() {
   const matchesPredicted = profile?.matches_predicted || 0;
   const points = profile?.points || 0;
   const accuracy = profile?.accuracy || 0;
-  const rank = await rankPromise;
   
-  const level = Math.floor(points / 10) + 1;
-  const pulse = matchesPredicted > 50 ? "OVERDRIVE" : 
-                matchesPredicted > 20 ? "HIGH" : 
-                matchesPredicted > 5 ? "STABLE" : "CALIBRATING";
-  
-  const tier = points > 100 ? "GRANDMASTER" :
-               points > 50 ? "EXPERT" :
-               points > 20 ? "ELITE" : "INITIATE";
+  const level = calculateLevel(points);
+  const tier = calculateTier(rank, totalUsers);
+  const pulse = calculatePulse(accuracy, matchesPredicted);
 
   return (
     <div className="flex flex-col gap-12">
@@ -60,7 +63,7 @@ export default async function ProfilePage() {
           <p className="text-primary font-bold uppercase tracking-[0.3em] text-[10px] mt-1">Elite Neural Strategist</p>
           <div className="flex flex-wrap gap-3 mt-6 justify-center md:justify-start">
              <span className="px-4 py-1.5 bg-secondary/10 border border-secondary/30 rounded-full text-[10px] font-black text-secondary uppercase italic">Level {level}</span>
-             <span className="px-4 py-1.5 bg-tertiary/10 border border-tertiary/30 rounded-full text-[10px] font-black text-tertiary uppercase italic">{tier} Tier</span>
+             <span className={cn("px-4 py-1.5 border rounded-full text-[10px] font-black uppercase italic", getTierColor(tier))}>{tier}</span>
           </div>
         </div>
       </header>
