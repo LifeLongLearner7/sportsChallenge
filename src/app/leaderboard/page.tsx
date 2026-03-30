@@ -8,7 +8,10 @@ export default async function LeaderboardPage() {
     getLeaderboardStats(),
   ]);
 
-  const rank = profile ? await getUserRank(profile.id) : 0;
+  // Parallelize the rank fetch IF we have a profile
+  const rankPromise = profile ? getUserRank(profile.id) : Promise.resolve(0);
+  const rank = await rankPromise;
+
   const profileWithRank = profile 
     ? { ...profile, rank } 
     : null;

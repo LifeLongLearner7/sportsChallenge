@@ -267,23 +267,27 @@ export const getLeaderboard = unstable_cache(
   { revalidate: 7200 }
 );
 
-export async function getUserRank(userId: string) {
-  const { data: userProfile } = await staticSupabase
-    .from("profiles")
-    .select("points")
-    .eq("id", userId)
-    .single();
+export const getUserRank = unstable_cache(
+  async (userId: string) => {
+    const { data: userProfile } = await staticSupabase
+      .from("profiles")
+      .select("points")
+      .eq("id", userId)
+      .single();
 
-  if (!userProfile) return 0;
+    if (!userProfile) return 0;
 
-  const { count, error } = await staticSupabase
-    .from("profiles")
-    .select("*", { count: 'exact', head: true })
-    .gt("points", userProfile.points || 0);
+    const { count, error } = await staticSupabase
+      .from("profiles")
+      .select("*", { count: 'exact', head: true })
+      .gt("points", userProfile.points || 0);
 
-  if (error) return 0;
-  return (count || 0) + 1;
-}
+    if (error) return 0;
+    return (count || 0) + 1;
+  },
+  ["user-rank"],
+  { revalidate: 3600 } // Cache user rank for 1 hour
+);
 
 // Arena Data Actions
 export const getCompletedMatches = unstable_cache(

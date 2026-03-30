@@ -1,6 +1,6 @@
 import { User, Shield, Zap, Trophy } from "lucide-react";
 import Image from "next/image";
-import { getUserProfile, getUserDetailedHistory } from "@/lib/data-actions";
+import { getUserProfile, getUserDetailedHistory, getUserRank } from "@/lib/data-actions";
 import { AVATARS } from "@/lib/constants";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -16,15 +16,18 @@ export default async function ProfilePage() {
   const profile = await getUserProfile();
   
   if (!profile) return null;
+
+  // Parallelize rank fetch if we have a profile
+  const rankPromise = getUserRank(profile.id);
   
   // Find the selected avatar icon
   const selectedAvatar = AVATARS.find(a => a.id === profile?.avatar_url) || AVATARS[0];
-  const AvatarIcon = selectedAvatar.icon;
 
   // Calculate dynamic stats
   const matchesPredicted = profile?.matches_predicted || 0;
   const points = profile?.points || 0;
   const accuracy = profile?.accuracy || 0;
+  const rank = await rankPromise;
   
   const level = Math.floor(points / 10) + 1;
   const pulse = matchesPredicted > 50 ? "OVERDRIVE" : 
@@ -75,8 +78,8 @@ export default async function ProfilePage() {
         </div>
         <div className="glass-panel p-6 rounded-2xl flex flex-col items-center text-center gap-3">
           <Trophy className="text-tertiary" size={24} />
-          <div className="text-[10px] font-black text-slate-500 uppercase">Arena Trophies</div>
-          <div className="text-2xl font-headline font-black text-white italic">{points}</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase">Tactical Rank</div>
+          <div className="text-2xl font-headline font-black text-white italic">#{rank}</div>
         </div>
       </div>
 
