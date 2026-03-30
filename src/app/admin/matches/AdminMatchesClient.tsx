@@ -233,19 +233,37 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
           <div className="space-y-4">
             <h3 className="text-xs font-mono text-white/20 uppercase tracking-[0.3em] pl-2">Resolved Archives</h3>
             <div className="space-y-2">
-              {completedMatches.slice(0, 5).map(match => (
-                <div key={match.id} className="p-3 bg-white/5 border border-white/5 rounded-xl flex items-center justify-between opacity-60 hover:opacity-100 transition-opacity">
-                  <p className="text-[10px] font-bold uppercase tracking-tight">{match.team_a} vs {match.team_b}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-mono text-white/30 uppercase">Winner:</span>
-                    <span className="text-[9px] font-black uppercase text-emerald-400">
-                      {match.winner === match.team_a ? match.team_a : match.team_b}
-                    </span>
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              {completedMatches.map(match => (
+                <div key={match.id} className="p-4 bg-white/5 border border-white/5 rounded-xl flex flex-col gap-3 group/archive transition-all">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-tight">{match.team_a} vs {match.team_b}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[8px] font-mono text-white/30 uppercase">Winner:</span>
+                      <span className="text-[9px] font-black uppercase text-emerald-400">
+                        {match.winner === match.team_a || match.winner === match.team_b ? match.winner : "UNKNOWN"}
+                      </span>
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    </div>
                   </div>
-
+                  
+                  {/* Recalculate Buttons for Admin Override */}
+                  <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-3">
+                    <button 
+                      onClick={() => handleUpdateWinner(match.id, "team_a")}
+                      disabled={isPending || syncing}
+                      className="py-2 px-3 rounded-lg border border-white/5 bg-white/5 hover:bg-orange-500/10 hover:border-orange-500/20 text-[8px] text-white/60 hover:text-white font-bold tracking-widest uppercase transition-all disabled:opacity-50"
+                    >
+                      Override: {match.team_a}
+                    </button>
+                    <button 
+                      onClick={() => handleUpdateWinner(match.id, "team_b")}
+                      disabled={isPending || syncing}
+                      className="py-2 px-3 rounded-lg border border-white/5 bg-white/5 hover:bg-orange-500/10 hover:border-orange-500/20 text-[8px] text-white/60 hover:text-white font-bold tracking-widest uppercase transition-all disabled:opacity-50"
+                    >
+                      Override: {match.team_b}
+                    </button>
+                  </div>
                 </div>
-
               ))}
             </div>
           </div>

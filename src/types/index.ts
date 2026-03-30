@@ -34,7 +34,6 @@ export interface Profile {
   avatar_id?: string;
   is_admin?: boolean;
   points?: number;
-  total_points?: number;
   matches_predicted: number;
   accuracy: number;
 }

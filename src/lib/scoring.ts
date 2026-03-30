@@ -76,34 +76,41 @@ export const processAllPredictionsForMatch = async (matchId: string, actualWinne
       .eq("user_id", pred.user_id)
       .eq("match_id", matchId);
 
-      // B. Update User Profile Points (Use real DB columns: total_points, accuracy)
+      // B. Update User Profile Points (Use real DB columns deterministically for idempotency)
       const { data: profile } = await supabase
         .from("profiles")
-        .select("total_points, matches_predicted, accuracy")
+        .select("id")
         .eq("id", pred.user_id)
         .single();
 
       if (profile) {
-        const newTotalPoints = (profile.total_points || 0) + points;
-        const newMatchesPredicted = (profile.matches_predicted || 0) + 1;
-        
-        // Calculate accuracy directly from the current database state
-        // Correct predictions = count where points_won > 0
-        const { count: totalCorrect } = await supabase
+        // Calculate deterministic stats by aggregating ALL completed predictions
+        const { data: allUserPredictions } = await supabase
           .from("predictions")
-          .select("*", { count: 'exact', head: true })
-          .eq("user_id", pred.user_id)
-          .gt("points_won", 0);
+          .select("points_won, match_id")
+          .eq("user_id", pred.user_id);
 
-        const newAccuracy = newMatchesPredicted > 0 
-          ? ((totalCorrect || 0) / newMatchesPredicted) * 100 
+        let sumPoints = 0;
+        let sumPredicted = 0;
+        let sumCorrect = 0;
+
+        if (allUserPredictions) {
+           sumPredicted = allUserPredictions.length;
+           for (const p of allUserPredictions) {
+             sumPoints += p.points_won || 0;
+             if ((p.points_won || 0) > 0) sumCorrect++;
+           }
+        }
+
+        const newAccuracy = sumPredicted > 0 
+          ? (sumCorrect / sumPredicted) * 100 
           : 0;
 
         await supabase
           .from("profiles")
           .update({
-            total_points: newTotalPoints,
-            matches_predicted: newMatchesPredicted,
+            points: sumPoints,
+            matches_predicted: sumPredicted,
             accuracy: Math.round(newAccuracy * 10) / 10
           })
           .eq("id", pred.user_id);

@@ -140,22 +140,22 @@ export async function systemResultSync() {
           return hasA && hasB;
        });
 
-       let actualWinner: "team_a" | "team_b" | null = null;
-
+       let actualWinnerKey: "team_a" | "team_b" | null = null;
 
        if (externalMatch) {
-         actualWinner = determineWinner(externalMatch, match.team_a, match.team_b);
+         actualWinnerKey = determineWinner(externalMatch, match.team_a, match.team_b);
        }
 
-       if (actualWinner) {
-         console.log(`Strategic Pulse: Match ${match.id} resolved as ${actualWinner}.`);
+       if (actualWinnerKey) {
+         const actualWinnerName = actualWinnerKey === "team_a" ? match.team_a : match.team_b;
+         console.log(`Strategic Pulse: Match ${match.id} resolved as ${actualWinnerName}.`);
          
          await supabase
            .from("matches")
-           .update({ winner: actualWinner, status: "completed" })
+           .update({ winner: actualWinnerName, status: "completed" })
            .eq("id", match.id);
 
-         await processAllPredictionsForMatch(match.id, actualWinner, match.ai_prediction);
+         await processAllPredictionsForMatch(match.id, actualWinnerName, match.ai_prediction);
        }
     }
   }
@@ -188,11 +188,12 @@ export async function systemPredictionSync() {
   if (upcomingWithoutPredictions && upcomingWithoutPredictions.length > 0) {
     for (const match of upcomingWithoutPredictions) {
        const prediction = await generateMatchPrediction(match);
-       if (prediction) {
+       if (prediction && (prediction.winner === "team_a" || prediction.winner === "team_b")) {
+         const actualAiPick = prediction.winner === "team_a" ? match.team_a : match.team_b;
          await supabase
            .from("matches")
            .update({
-             ai_prediction: prediction.winner,
+             ai_prediction: actualAiPick,
              ai_confidence: prediction.confidence,
              ai_reasoning: prediction.reasoning
            })
