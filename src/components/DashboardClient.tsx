@@ -15,7 +15,7 @@ import {
 import MatchCard from "./MatchCard";
 import Navbar from "@/components/Navbar";
 import { submitPrediction } from "@/lib/data-actions";
-import { AVATARS } from "@/lib/constants";
+import { AVATARS, MR_PREDICTO_AVATAR } from "@/lib/constants";
 import Image from "next/image";
 import Link from "next/link";
 import { 
@@ -185,7 +185,7 @@ export default function DashboardClient({
                 
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center text-[9px] font-black tracking-widest uppercase">
-                    <span className="text-secondary/70">AI Core Sync</span>
+                    <span className="text-secondary/70">Mr. Predicto</span>
                     <span className="text-secondary">{globalStats.avgAiAccuracy}%</span>
                   </div>
                   <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
@@ -288,16 +288,16 @@ export default function DashboardClient({
                  <div className="absolute -right-4 -top-4 text-white/[0.02] rotate-12">
                    <Target size={120} />
                  </div>
-                 <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                   <Bot size={24} className="text-secondary animate-pulse" />
+                 <div className="w-24 h-24 relative hex-clip border border-secondary/20 shadow-[0_0_30px_rgba(255,107,152,0.4)] overflow-hidden">
+                    <Image src={MR_PREDICTO_AVATAR.path!} fill className="object-cover" alt="Mr. Predicto" />
                  </div>
                  <div className="flex flex-col gap-2">
                    <div className="font-headline font-black text-2xl text-white uppercase italic tracking-tighter leading-none">
-                      Neural <span className="text-secondary">Latency</span>
+                       vs <span className="text-secondary">Mr. Predicto</span>
                    </div>
-                   <p className="text-[9px] text-slate-500 uppercase font-black tracking-[0.2em] leading-relaxed">
-                      {humanLead >= 0 ? "Humans" : "AI Core"} leading <br/> by <span className="text-primary">+{Math.abs(humanLead).toFixed(1)}%</span>
-                   </p>
+                    <p className="text-[9px] text-slate-500 uppercase font-black tracking-[0.2em] leading-relaxed">
+                       {humanLead >= 0 ? "Humans" : "Mr. Predicto"} leading <br/> by <span className="text-secondary">+{Math.abs(humanLead).toFixed(1)}%</span>
+                    </p>
                  </div>
                  <Link href="/arena" className="w-full">
                     <button className="w-full py-2.5 bg-white text-slate-950 text-[9px] font-black uppercase rounded hover:bg-slate-200 transition-all">

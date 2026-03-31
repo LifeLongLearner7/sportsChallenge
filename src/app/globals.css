@@ -60,6 +60,54 @@ body {
   animation: marquee 30s linear infinite;
 }
 
+@keyframes neural-pulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-50px); opacity: 0; }
+  50% { opacity: 0.8; }
+  100% { transform: translateY(50px); opacity: 0; }
+}
+
+.animate-neural-pulse {
+  animation: neural-pulse 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.animate-scan-line {
+  animation: scan-line 2s ease-in-out infinite;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(129, 236, 255, 0.5);
+  box-shadow: 0 0 10px rgba(129, 236, 255, 0.3);
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
 }

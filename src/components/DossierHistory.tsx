@@ -88,7 +88,7 @@ export default async function DossierHistory({ userId, limit = 10 }: DossierHist
                    {/* AI Comparison */}
                    <div className="flex flex-col gap-1 min-w-[120px]">
                       <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                        <BrainCircuit size={10} className="text-primary" /> AI Pulse
+                         <BrainCircuit size={10} className="text-primary" /> Mr. Predicto
                       </span>
                       <div className="flex items-center gap-2">
                          <span className={cn(
@@ -127,13 +127,13 @@ export default async function DossierHistory({ userId, limit = 10 }: DossierHist
                       {!aiFollowed && isCorrect && (
                          <div className="flex items-center gap-1.5 px-3 py-1 bg-tertiary/20 border border-tertiary/40 rounded-lg">
                             <Zap size={10} className="text-tertiary animate-pulse" />
-                            <span className="text-[10px] font-black text-tertiary uppercase italic">Human Superiority Confirmed</span>
+                            <span className="text-[10px] font-black text-tertiary uppercase italic">You Outfoxed Mr. Predicto!</span>
                          </div>
                       )}
                       {aiFollowed && !isCorrect && (
                          <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 border border-rose-500/20 rounded-lg">
                             <AlertTriangle size={10} className="text-rose-400" />
-                            <span className="text-[10px] font-black text-rose-400 uppercase italic">Collateral AI Failure</span>
+                            <span className="text-[10px] font-black text-rose-400 uppercase italic">Mr. Predicto Failed You</span>
                          </div>
                       )}
                    </div>

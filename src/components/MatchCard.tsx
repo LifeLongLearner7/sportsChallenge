@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Calendar, MapPin, Trophy, Bot } from "lucide-react";
 import { Match } from "@/types";
-import { TEAM_LOGOS } from "@/lib/constants";
+import { TEAM_LOGOS, MR_PREDICTO_AVATAR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 interface MatchCardProps {
@@ -165,18 +165,38 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture }
                   <div className="flex flex-col gap-2 relative z-10">
                     <div className="flex justify-between items-center">
                        <div className="flex items-center gap-2">
-                         <Bot size={16} className="text-secondary" />
-                         <span className="text-[10px] font-black text-secondary tracking-widest uppercase italic">Neural Insight</span>
+                       <div className="relative w-4 h-4 hex-clip shadow-[0_0_8px_rgba(255,107,152,0.3)]">
+                          <Image src={MR_PREDICTO_AVATAR.path!} fill className="object-cover" alt="" />
+                       </div>
+                          <span className="text-[10px] font-black text-secondary tracking-widest uppercase italic">Mr. Predicto's Pick</span>
                        </div>
                        <span className="text-[10px] font-bold text-secondary">{match.ai_confidence}% Match Depth</span>
                     </div>
                     <div className="flex justify-between items-center">
-                       <span className="text-sm font-headline font-black text-white italic uppercase tracking-tighter">AI Pick: {match.ai_prediction}</span>
+                        <span className="text-sm font-headline font-black text-white italic uppercase tracking-tighter">MR. PREDICTO: {match.ai_prediction}</span>
                     </div>
                     {match.ai_reasoning && (
                       <p className="text-[9px] text-slate-400 leading-relaxed italic border-l-2 border-secondary/30 pl-2 mt-1">
                         &quot;{match.ai_reasoning}&quot;
                       </p>
+                    )}
+
+                    {/* AI FAILURE MESSAGE: "Outfoxed" */}
+                    {match.status === "completed" && match.winner && match.ai_prediction && match.ai_prediction !== match.winner && (
+                      <div className="mt-3 py-2 px-3 bg-red-500/10 border border-red-500/20 rounded flex items-center justify-between animate-pulse">
+                          <span className="text-[8px] font-black text-red-400 uppercase tracking-widest">Mr. Predicto Got It Wrong!</span>
+                         <span className="text-[9px] font-bold text-white px-2 py-0.5 bg-red-500/20 rounded-full border border-red-500/30">
+                           {match.outfoxed_count || 0} Outfoxed It
+                         </span>
+                      </div>
+                    )}
+
+                    {/* AI SUCCESS MESSAGE */}
+                    {match.status === "completed" && match.winner && match.ai_prediction === match.winner && (
+                      <div className="mt-3 py-2 px-3 bg-emerald-500/10 border border-emerald-500/20 rounded flex items-center justify-between">
+                          <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Mr. Predicto Nailed It</span>
+                         <span className="text-[9px] font-bold text-white px-2 py-0.5 bg-emerald-500/20 rounded-full">Optimal Pick</span>
+                      </div>
                     )}
                   </div>
                </div>

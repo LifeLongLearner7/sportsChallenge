@@ -50,7 +50,7 @@ export default async function LandingPage() {
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-primary w-2 h-2 rounded-full bg-primary shadow-[0_0_5px_#81ecff]"></span> 
-                  AI CORE INTEGRITY: {stats.aiScore}
+                  MR. PREDICTO: {stats.aiScore}
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-tertiary w-2 h-2 rounded-full bg-tertiary shadow-[0_0_5px_#ffe792]"></span> 

@@ -105,6 +105,7 @@ export const processAllPredictionsForMatch = async (
         id: r.id,
         points_won: r.points_won,
         is_neural_override: r.is_neural_override,
+        is_correct: (r.points_won || 0) > 0, // NEW: Hardened flag
       })),
       { onConflict: "id" }
     );
@@ -121,9 +122,8 @@ export const processAllPredictionsForMatch = async (
   // Collect unique user IDs from this match's predictions
   const uniqueUserIds = [...new Set(scoringResults.map((r) => r.user_id))];
 
-  for (const userId of uniqueUserIds) {
-    // ONE single-row aggregate query per user (not a full SELECT *)
-    // Returns: total points earned, total predictions made, total correct
+  // Parallelize profile updates for performance at scale
+  await Promise.all(uniqueUserIds.map(async (userId) => {
     const { data: aggData, error: aggError } = await supabase
       .from("predictions")
       .select("points_won")
@@ -134,10 +134,9 @@ export const processAllPredictionsForMatch = async (
         `Scoring: Aggregate query failed for user ${userId}:`,
         aggError
       );
-      continue;
+      return;
     }
 
-    // Compute profile stats deterministically from aggregate result
     const totalPredicted = aggData.length;
     const totalPoints = aggData.reduce(
       (sum, p) => sum + (p.points_won || 0),
@@ -147,7 +146,6 @@ export const processAllPredictionsForMatch = async (
     const newAccuracy =
       totalPredicted > 0 ? (totalCorrect / totalPredicted) * 100 : 0;
 
-    // ONE profile update per unique user
     await supabase
       .from("profiles")
       .update({
@@ -156,10 +154,91 @@ export const processAllPredictionsForMatch = async (
         accuracy: Math.round(newAccuracy * 10) / 10,
       })
       .eq("id", userId);
+  }));
+
+  // ── Step 6: Calculate and store "Outfoxed" count ─────────────────────────
+  // A strategist "outfoxes" the AI if AI was WRONG and they were RIGHT.
+  const isAiWrong = aiWinner?.toLowerCase() !== actualWinner.toLowerCase();
+  
+  if (isAiWrong) {
+    const outfoxedCount = scoringResults.filter(r => 
+      r.points_won > 0 && r.user_id !== "00000000-0000-0000-0000-000000000001"
+    ).length;
+
+    await supabase
+      .from("matches")
+      .update({ outfoxed_count: outfoxedCount })
+      .eq("id", matchId);
+    
+    console.log(`Scoring: Neural Core outfoxed by ${outfoxedCount} strategists in match ${matchId}.`);
   }
+
+  // ── Step 7: Update Global Platform Stats (The Scalability Win) ────────────
+  const AI_USER_ID_STATS = "00000000-0000-0000-0000-000000000001";
+
+  // Exclude Mr. Predicto from human stats
+  const { data: allProfiles } = await supabase
+    .from("profiles")
+    .select("accuracy, points")
+    .eq("is_ai", false);
+
+  if (allProfiles) {
+    const totalUsers = allProfiles.length;
+    const avgAccuracy = allProfiles.reduce((acc, p) => acc + (p.accuracy || 0), 0) / (totalUsers || 1);
+    const humanPointsTotal = allProfiles.reduce((acc, p) => acc + (p.points || 0), 0);
+    
+    // AI accuracy = actual win rate, not self-reported confidence
+    const { data: resolvedMatches } = await supabase
+      .from("matches")
+      .select("ai_prediction, winner")
+      .not("winner", "is", null);
+    const aiCorrect = resolvedMatches?.filter(m => m.ai_prediction === m.winner).length || 0;
+    const aiAccuracy = resolvedMatches?.length
+      ? (aiCorrect / resolvedMatches.length) * 100
+      : 0;
+    const totalMatchesCount = resolvedMatches?.length || 0;
+
+    // Get Mr. Predicto's actual scored points
+    const { data: aiProfile } = await supabase
+      .from("profiles")
+      .select("points")
+      .eq("id", AI_USER_ID_STATS)
+      .single();
+
+    await supabase.from("global_stats").upsert({
+      sport: 'cricket',
+      human_accuracy: Math.round(avgAccuracy * 10) / 10,
+      ai_accuracy: Math.round(aiAccuracy * 10) / 10,
+      human_points_total: humanPointsTotal,
+      ai_points_total: aiProfile?.points || 0,
+      total_matches: totalMatchesCount,
+      total_users: totalUsers,
+      last_updated: new Date().toISOString()
+    }, { onConflict: 'sport' });
+  }
+
+  // ── Step 8: System Log (Diagnostic Transparency) ─────────────────────────
+  await logSystemActivity('scoring', 'success', `Processed ${predictions.length} predictions for match ${matchId}.`);
 
   console.log(
     `Scoring: Successfully processed ${predictions.length} predictions across ${uniqueUserIds.length} unique users.`
   );
   return { success: true, processed: predictions.length };
 };
+
+/**
+ * Diagnostic Logging System
+ */
+export async function logSystemActivity(type: string, status: 'success' | 'failure', message: string, metadata?: any) {
+  try {
+    const supabase = await createServiceClient();
+    await supabase.from('system_logs').insert({
+      activity_type: type,
+      status,
+      message,
+      metadata
+    });
+  } catch (e) {
+    console.error('Logging Failure:', e);
+  }
+}

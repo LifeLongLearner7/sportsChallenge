@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Zap, Mail, Users, Info, Trophy } from "lucide-react";
+import NextImage from "next/image";
+import { Zap, Mail, Users, Info, Trophy } from "lucide-react";
+import { MR_PREDICTO_AVATAR } from "@/lib/constants";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface LandingHeroProps {
@@ -150,9 +152,11 @@ export default function LandingHero({ stats }: LandingHeroProps) {
           <p className="text-xs text-on-surface-variant">Real-time data powering your predictions</p>
         </div>
         <div className="p-6 glass-panel rounded-xl flex flex-col gap-2 group hover:bg-surface-container-high transition-colors">
-          <Bot className="text-secondary" size={32} />
-          <h3 className="font-headline font-bold text-lg uppercase tracking-tight">AI Opponents</h3>
-          <p className="text-xs text-on-surface-variant">Battle against advanced machine learning algorithms.</p>
+          <div className="relative w-8 h-8 hex-clip border border-secondary/30 shadow-[0_0_15px_rgba(255,107,152,0.4)] overflow-hidden">
+             <NextImage src={MR_PREDICTO_AVATAR.path!} fill className="object-cover" alt="Mr. Predicto" />
+          </div>
+          <h3 className="font-headline font-bold text-lg uppercase tracking-tight">MR. PREDICTO</h3>
+          <p className="text-xs text-on-surface-variant">Beat our AI rival — powered by GPT‑4o neural analysis.</p>
         </div>
       </div>
     </div>

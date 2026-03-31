@@ -10,7 +10,7 @@ const openai = new OpenAI({
 });
 
 import { fetchRecentResults, determineWinner, TEAM_MAPPINGS } from "./api-service";
-import { processAllPredictionsForMatch } from "./scoring";
+import { processAllPredictionsForMatch, logSystemActivity } from "./scoring";
 
 
 /**
@@ -78,7 +78,7 @@ export async function systemStatusSync() {
     .lte("match_time", endOfDay);
 
   if (error) {
-    console.error("Pulse Failure: Status Sync failed:", error);
+    await logSystemActivity('sync', 'failure', 'Daily Status Sync failed', error);
     return { success: false, error };
   }
 
@@ -95,6 +95,7 @@ export async function systemStatusSync() {
     }
 
     console.log(`Strategic Pulse: Matches marked as ACTIVE: ${todayMatches.map(m => `${m.team_a} vs ${m.team_b}`).join(", ")}`);
+    await logSystemActivity('sync', 'success', `Activated ${todayMatches.length} fixtures.`);
   }
 
   revalidatePath("/dashboard");
@@ -160,6 +161,8 @@ export async function systemResultSync() {
     }
   }
 
+  await logSystemActivity('result', 'success', `Match result sync completed at ${now.toLocaleTimeString()}`);
+
   revalidatePath("/dashboard");
   revalidatePath("/leaderboard");
   return { success: true, mode: "results_synced" };
@@ -200,22 +203,37 @@ export async function systemPredictionSync() {
            actualAiPick = match.team_b;
          }
 
-         if (actualAiPick) {
-           await supabase
-             .from("matches")
-             .update({
-               ai_prediction: actualAiPick,
-               ai_confidence: prediction.confidence,
-               ai_reasoning: prediction.reasoning
-             })
-             .eq("id", match.id);
-         }
-       }
+          if (actualAiPick) {
+            // Update the match with AI prediction
+            await supabase
+              .from("matches")
+              .update({
+                ai_prediction: actualAiPick,
+                ai_confidence: prediction.confidence,
+                ai_reasoning: prediction.reasoning
+              })
+              .eq("id", match.id);
+
+            // AUTO-PLAY: Also record this as a prediction for "Mr. Predicto"
+            const AI_USER_ID = "00000000-0000-0000-0000-000000000001";
+            await supabase
+              .from("predictions")
+              .upsert({
+                user_id: AI_USER_ID,
+                match_id: match.id,
+                prediction: actualAiPick,
+                created_at: new Date().toISOString()
+              }, { onConflict: 'user_id,match_id' });
+          }
+        }
     }
   }
 
+  await logSystemActivity('prediction', 'success', `AI Tactical Sync completed for ${lookaheadWindow}.`);
+
   revalidatePath("/dashboard");
   revalidatePath("/arena");
+  revalidatePath("/leaderboard");
   return { success: true, mode: "predictions_synced" };
 }
 

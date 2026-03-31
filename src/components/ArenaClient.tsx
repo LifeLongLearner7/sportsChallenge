@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Match, Profile } from "@/types";
-import { AVATARS } from "@/lib/constants";
+import { AVATARS, ALL_IDENTITIES, MR_PREDICTO_AVATAR } from "@/lib/constants";
 import Navbar from "@/components/Navbar";
 import { cn } from "@/lib/utils";
 import { 
@@ -13,7 +13,6 @@ import {
   Trash2, 
   Shield, 
   Trophy, 
-  Activity,
   User,
   Zap,
   Bot
@@ -119,10 +118,10 @@ export default function ArenaClient({
     <main className="min-h-screen bg-background pt-24 pb-12 px-6">
       <Navbar isAdmin={profile?.is_admin} profile={profile} />
       
-      <div className="max-w-screen-2xl mx-auto grid lg:grid-cols-12 gap-8 h-[calc(100vh-160px)]">
+      <div className="max-w-screen-2xl mx-auto grid lg:grid-cols-12 gap-8">
         
         {/* Left Column: Analytics & Records (7 cols) */}
-        <div className="lg:col-span-7 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="lg:col-span-7 flex flex-col gap-6 pr-2">
           
           {/* Header */}
           <div className="flex flex-col gap-2 mb-4">
@@ -140,22 +139,22 @@ export default function ArenaClient({
           </div>
 
           {/* Conflict Gauge */}
-          <div className="glass-panel p-8 rounded-2xl relative overflow-hidden group border-white/5 bg-gradient-to-br from-secondary/5 to-primary/5">
+          <div className="glass-panel p-10 rounded-2xl relative group border-white/5 bg-gradient-to-br from-secondary/5 to-primary/5 mb-10 overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 blur-3xl -mr-32 -mt-32"></div>
             <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center">
                <div className="flex flex-col gap-6">
                   <div>
                     <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-2">Neural Synchronization</h3>
-                    <div className="text-3xl font-headline font-black text-white italic uppercase leading-none">
-                       {humanLead >= 0 ? "Human" : "AI Core"} <br/>
-                       Superiority: <span className={cn(humanLead >= 0 ? "text-primary" : "text-secondary")}>+{Math.abs(humanLead).toFixed(1)}%</span>
-                    </div>
+                     <div className="text-3xl font-headline font-black text-white italic uppercase leading-none">
+                        {humanLead >= 0 ? "Human" : "Mr. Predicto"} <br/>
+                        Superiority: <span className={cn(humanLead >= 0 ? "text-primary" : "text-secondary")}>+{Math.abs(humanLead).toFixed(1)}%</span>
+                     </div>
                   </div>
                   
                   <div className="flex flex-col gap-4">
                      <div className="space-y-2">
                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest leading-none">
-                           <span className="text-slate-400">Biological Consensus</span>
+                           <span className="text-slate-400">Strategist Consensus</span>
                            <span className="text-white">{globalStats.avgHumanAccuracy}%</span>
                         </div>
                         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
@@ -164,7 +163,7 @@ export default function ArenaClient({
                      </div>
                      <div className="space-y-2">
                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest leading-none">
-                           <span className="text-secondary/70">Synthetic Calculation</span>
+                           <span className="text-secondary/70">Mr. Predicto</span>
                            <span className="text-secondary">{globalStats.avgAiAccuracy}%</span>
                         </div>
                         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
@@ -174,15 +173,31 @@ export default function ArenaClient({
                   </div>
                </div>
                
-               <div className="flex flex-col gap-4 items-center justify-center p-6 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
-                  <div className="relative">
-                    <Activity size={80} className={cn("transition-colors duration-1000", humanLead >= 0 ? "text-primary/20" : "text-secondary/20")} />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                       {humanLead >= 0 ? <User size={40} className="text-primary animate-pulse" /> : <Bot size={40} className="text-secondary animate-pulse" /> }
-                    </div>
-                  </div>
+                <div className="flex flex-col gap-6 items-center justify-center p-10 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
+                   <div className="relative w-48 h-48 flex items-center justify-center">
+                     {/* Neural Resonance Rings */}
+                     <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0", humanLead >= 0 ? "border-primary/30" : "border-secondary/30")}></div>
+                     <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0 [animation-delay:1s]", humanLead >= 0 ? "border-primary/20" : "border-secondary/20")}></div>
+                     <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0 [animation-delay:2s]", humanLead >= 0 ? "border-primary/10" : "border-secondary/10")}></div>
+
+                     <div className="relative z-10 w-32 h-32 flex items-center justify-center">
+                        {humanLead >= 0 ? (
+                          <div className="relative w-20 h-20 flex items-center justify-center">
+                             <User size={64} className="text-primary animate-pulse" />
+                             {/* Scanning Line HUD */}
+                             <div className="absolute inset-x-0 h-0.5 bg-primary/40 shadow-[0_0_12px_#81ecff] animate-scan-line z-20"></div>
+                          </div>
+                        ) : (
+                          <div className="relative w-24 h-24 hex-clip border border-secondary/30 shadow-[0_0_30px_#ff6b98] group/avatar">
+                             <Image src={MR_PREDICTO_AVATAR.path!} fill className="object-cover" alt="Mr. Predicto" />
+                             {/* Scanning Line HUD */}
+                             <div className="absolute inset-x-0 h-0.5 bg-secondary/40 shadow-[0_0_12px_#ff6b98] animate-scan-line z-20"></div>
+                          </div>
+                        )}
+                     </div>
+                   </div>
                   <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest text-center max-w-[150px]">
-                     Current platform evolution favouring {humanLead >= 0 ? "Biological Neural Nets" : "Synthetic AI Core"}
+                     Current platform evolution favouring {humanLead >= 0 ? "Human Strategists" : "Mr. Predicto"}
                   </div>
                </div>
             </div>
@@ -191,7 +206,7 @@ export default function ArenaClient({
           {/* Combat Logs (Completed Matches) */}
           <div className="flex flex-col gap-4">
              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em] flex items-center gap-2 px-2">
-               <Activity size={14} className="text-white" /> Combat Logs
+               <Sword size={14} className="text-white" /> Combat Logs
              </h3>
              <div className="grid gap-4">
                 {completedMatches.length > 0 ? (
@@ -212,7 +227,7 @@ export default function ArenaClient({
                               <div className="flex gap-4">
                                  <div className="flex items-center gap-1.5">
                                     <div className={cn("w-2 h-2 rounded-full", aiWinner ? "bg-green-500 shadow-[0_0_8px_green]" : "bg-red-500 shadow-[0_0_8px_red]")}></div>
-                                    <span className="text-[8px] font-black text-slate-400 uppercase">AI: {match.ai_prediction}</span>
+                                    <span className="text-[8px] font-black text-slate-400 uppercase">Mr. Predicto: {match.ai_prediction}</span>
                                  </div>
 
                                  <div className="flex items-center gap-1.5">
@@ -227,12 +242,12 @@ export default function ArenaClient({
                            {aiWinner ? (
                              <div className="px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full flex items-center gap-1.5">
                                 <Zap size={10} className="text-green-500" />
-                                <span className="text-[8px] font-black text-green-500 uppercase">AI Win</span>
+                                <span className="text-[8px] font-black text-green-500 uppercase">Mr. Predicto Wins</span>
                              </div>
                            ) : (
                              <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full flex items-center gap-1.5">
                                 <User size={10} className="text-primary" />
-                                <span className="text-[8px] font-black text-primary uppercase">Human Win</span>
+                                <span className="text-[8px] font-black text-primary uppercase">Mr. Predicto Outfoxed</span>
                              </div>
                            )}
                         </div>
@@ -279,7 +294,7 @@ export default function ArenaClient({
                 messages.map((msg) => {
                   const isAdminMsg = msg.profiles?.is_admin;
                   const isOwn = msg.user_id === profile?.id;
-                   const msgAvatar = AVATARS.find((a: any) => a.id === msg.profiles?.avatar_url) || AVATARS[0];
+                   const msgAvatar = ALL_IDENTITIES.find((a: any) => a.id === msg.profiles?.avatar_url) || AVATARS[0];
 
                    return (
                      <div key={msg.id} className={cn("flex flex-col gap-2 group max-w-[85%]", isOwn ? "self-end items-end" : "self-start items-start")}>

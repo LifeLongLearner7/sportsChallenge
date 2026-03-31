@@ -22,16 +22,24 @@ async function requireAdmin() {
 
 export const getMatches = unstable_cache(
   async () => {
-    const { data, error } = await staticSupabase
-      .from("matches")
-      .select("*")
-      .order("match_time", { ascending: true });
+    try {
+      const { data, error } = await staticSupabase
+        .from("matches")
+        .select("*")
+        .order("match_time", { ascending: true });
 
-    if (error) throw error;
-    return data as Match[];
+      if (error) {
+        console.error("Match Fetch Error:", error);
+        return [];
+      }
+      return (data as Match[]) || [];
+    } catch (err) {
+      console.error("Match Critical Failure:", err);
+      return [];
+    }
   },
   ["all-matches"],
-  { revalidate: 28800 }
+  { revalidate: 3600 }
 );
 
 export async function getUserProfile() {
@@ -61,13 +69,6 @@ export async function getUserProfile() {
   return profile as Profile;
 }
 
-export async function getUserTacticalRank(points: number = 0) {
-  const { count } = await staticSupabase
-    .from("profiles")
-    .select("*", { count: 'exact', head: true })
-    .gt("points", points);
-  return (count || 0) + 1;
-}
 
 /**
  * UNIFIED PLATFORM STATS (Phase 2.2 — Single Scan)
@@ -78,41 +79,55 @@ export async function getUserTacticalRank(points: number = 0) {
  */
 export const getPlatformStats = unstable_cache(
   async () => {
-    // Single parallel fetch for all needed columns
-    const [profilesResult, aiResult, totalCountResult] = await Promise.all([
-      staticSupabase.from("profiles").select("accuracy, points"),
-      staticSupabase.from("matches").select("ai_confidence"),
-      staticSupabase.from("profiles").select("*", { count: 'exact', head: true }),
-    ]);
+    // 🚀 THE SCALING WIN: O(1) Fetch from global_stats table
+    try {
+      const { data: stats, error } = await staticSupabase
+        .from("global_stats")
+        .select("*")
+        .eq("sport", "cricket")
+        .maybeSingle();
 
-    const profiles = profilesResult.data || [];
-    const aiMatches = aiResult.data || [];
-    const totalCount = totalCountResult.count || 0;
+      if (error || !stats || stats.total_users === 0) {
+        throw new Error(error?.message || "Stats zero or missing");
+      }
 
-    // Derived stats
-    const avgAccuracy = profiles.length
-      ? profiles.reduce((acc, p) => acc + (p.accuracy || 0), 0) / profiles.length
-      : 0;
+      const dominance = stats.human_accuracy - 50;
 
-    const avgAiAccuracy = aiMatches.length
-      ? aiMatches.reduce((acc, m) => acc + (m.ai_confidence || 0), 0) / aiMatches.length
-      : 72.5;
+      return {
+        userCount: stats.total_users,
+        avgHumanAccuracy: stats.human_accuracy,
+        avgAiAccuracy: stats.ai_accuracy,
+        activeNodes: stats.total_users.toLocaleString(),
+        meanAccuracy: stats.human_accuracy.toFixed(1) + "%",
+        dominance: (dominance > 0 ? "+" : "") + dominance.toFixed(1) + "%",
+      };
+    } catch (err) {
+      console.warn("Stats Fallback Active:", err);
+      
+      const { data: profiles } = await staticSupabase.from("profiles").select("accuracy, points");
+      const { count: totalCount } = await staticSupabase.from("profiles").select("*", { count: 'exact', head: true });
 
-    const dominance = avgAccuracy - 50;
+      const safeProfiles = profiles || [];
+      const safeCount = totalCount || 0;
+      
+      const avgAccuracy = safeProfiles.length
+        ? safeProfiles.reduce((acc: number, p: any) => acc + (p.accuracy || 0), 0) / safeProfiles.length
+        : 0;
+      
+      const dominance = avgAccuracy - 50;
 
-    return {
-      // Shape used by DashboardClient + ArenaClient
-      userCount: totalCount,
-      avgHumanAccuracy: Math.round(avgAccuracy * 10) / 10,
-      avgAiAccuracy: Math.round(avgAiAccuracy * 10) / 10,
-      // Shape used by LeaderboardClient
-      activeNodes: totalCount.toLocaleString(),
-      meanAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1) + "%",
-      dominance: (dominance > 0 ? "+" : "") + (Math.round(dominance * 10) / 10).toFixed(1) + "%",
-    };
+      return {
+        userCount: safeCount,
+        avgHumanAccuracy: Math.round(avgAccuracy * 10) / 10,
+        avgAiAccuracy: 72.5,
+        activeNodes: safeCount.toLocaleString(),
+        meanAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1) + "%",
+        dominance: (dominance > 0 ? "+" : "") + (Math.round(dominance * 10) / 10).toFixed(1) + "%",
+      };
+    }
   },
   ["platform-stats"],
-  { revalidate: 28800 }
+  { revalidate: 3600 }
 );
 
 /** Backwards-compatible: Leaderboard page expects this shape */
@@ -163,22 +178,29 @@ export async function getUserPredictions() {
 
 export const getUserDetailedHistory = unstable_cache(
   async (userId: string, limit = 10) => {
-    const { data, error } = await staticSupabase
-      .from("predictions")
-      .select(`
-        *,
-        matches (*)
-      `)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(limit);
+    try {
+      const { data, error } = await staticSupabase
+        .from("predictions")
+        .select(`
+          *,
+          matches (*)
+        `)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
 
-    if (error) return [];
-    return data;
+      if (error) {
+        console.error("Dossier Fetch Error:", error);
+        return [];
+      }
+      return data || [];
+    } catch (err) {
+      console.error("Dossier Critical Failure:", err);
+      return [];
+    }
   },
-  ["user-detailed-history"], // Next.js appends the arguments to the key parts automatically in most cases, 
-                             // but to be explicit and safe for user-specific data: 
-  { revalidate: 3600, tags: ["user-history"] }
+  ["user-detailed-history"], 
+  { revalidate: 60, tags: ["user-history"] }
 );
 
 export async function submitPrediction(matchId: string, predictedWinner: string) {
@@ -224,47 +246,40 @@ export async function updateProfile(updates: Partial<Profile>) {
 
 export const getLandingStats = unstable_cache(
   async () => {
-    // 1. Total Human Points (Collective Status)
-    const { data: humanPointsData } = await staticSupabase
-      .from("profiles")
-      .select("points");
-    
-    const totalHumanPoints = humanPointsData?.reduce((acc, p) => acc + (p.points || 0), 0) || 0;
+    // 🚀 THE SCALING WIN: O(1) Fetch from global_stats table
+    const { data: stats } = await staticSupabase
+      .from("global_stats")
+      .select("*")
+      .eq("sport", "cricket")
+      .maybeSingle();
 
-    // 2. AI Core Integrity (Total Confidence from all resolved matches)
-    const { data: aiConfidenceData } = await staticSupabase
-      .from("matches")
-      .select("ai_confidence")
-      .not("winner", "is", null);
-
-    const totalAiPoints = aiConfidenceData?.reduce((acc, m) => acc + (m.ai_confidence || 0), 0) || 0;
-
-    // 3. Global Accuracy (Average across all strategists)
-    const { data: globalAccuracyData } = await staticSupabase
-      .from("profiles")
-      .select("accuracy");
-
-    const avgAccuracy = globalAccuracyData?.length 
-      ? globalAccuracyData.reduce((acc, p) => acc + (p.accuracy || 0), 0) / globalAccuracyData.length 
-      : 0;
-
-    // 4. Top Predictor (Real-time Leaderboard)
+    // Still need the top predictor separately as it's a specific record
     const { data: topUser } = await staticSupabase
       .from("profiles")
       .select("screen_name, accuracy")
+      .eq("is_ai", false)
       .order("points", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    if (!stats) {
+      return {
+        humanScore: "0",
+        aiScore: "0",
+        globalAccuracy: "0.0",
+        topPredictor: topUser || { screen_name: "STRIKER_X", accuracy: 89.4 }
+      };
+    }
 
     return {
-      humanScore: totalHumanPoints.toLocaleString(),
-      aiScore: totalAiPoints.toLocaleString(),
-      globalAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1),
+      humanScore: stats.human_points_total.toLocaleString(),
+      aiScore: stats.ai_points_total.toLocaleString(),
+      globalAccuracy: stats.human_accuracy.toFixed(1),
       topPredictor: topUser || { screen_name: "STRIKER_X", accuracy: 89.4 }
     };
   },
   ["landing-stats"],
-  { revalidate: 28800 }
+  { revalidate: 3600 }
 );
 
 
@@ -276,11 +291,14 @@ export const getLeaderboard = unstable_cache(
       .order("points", { ascending: false })
       .limit(limit);
 
-    if (error) return [];
-    return data as Profile[];
+    if (error) {
+      console.error("Leaderboard Fetch Error:", error);
+      return [];
+    }
+    return (data as Profile[]) || [];
   },
   ["leaderboard-list"],
-  { revalidate: 28800 }
+  { revalidate: 1800 }
 );
 
 export const getUserRank = unstable_cache(
@@ -337,7 +355,7 @@ const purgeOldMessages = unstable_cache(
     return Date.now();
   },
   ["purge-arena-messages"],
-  { revalidate: 21600 } // 6 hours
+  { revalidate: 14400 } // 4 hours
 );
 
 export const getArenaMessages = unstable_cache(

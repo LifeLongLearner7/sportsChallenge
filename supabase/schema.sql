@@ -11,6 +11,7 @@ CREATE TABLE profiles (
   accuracy FLOAT DEFAULT 0, -- Note: Named 'accuracy' in DB, not 'accuracy_rate'
   matches_predicted INTEGER DEFAULT 0,
   is_admin BOOLEAN DEFAULT FALSE,
+  is_ai BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -30,6 +31,7 @@ CREATE TABLE matches (
   ai_prediction TEXT, -- Team name
   ai_confidence FLOAT,
   ai_reasoning TEXT,
+  outfoxed_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
   -- updated_at is missing in DB
 );
@@ -42,19 +44,32 @@ CREATE TABLE predictions (
   prediction TEXT NOT NULL, -- Note: Named 'prediction' in DB, not 'predicted_winner'
   points_won INTEGER DEFAULT 0, -- Note: Named 'points_won' in DB, not 'points_awarded'
   is_neural_override BOOLEAN DEFAULT FALSE, -- Note: Named 'is_neural_override' in DB, not 'beat_ai'
+  is_correct BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, match_id)
-  -- is_correct column is missing in DB
 );
 
--- Global stats for Human vs AI comparison
+-- Global stats for Human vs AI comparison (Optimized for scale)
 CREATE TABLE global_stats (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sport TEXT,
-  human_wins INTEGER DEFAULT 0,
-  ai_wins INTEGER DEFAULT 0,
+  sport TEXT DEFAULT 'cricket',
+  human_accuracy FLOAT DEFAULT 0,
+  ai_accuracy FLOAT DEFAULT 0,
+  human_points_total BIGINT DEFAULT 0,
+  ai_points_total BIGINT DEFAULT 0,
   total_matches INTEGER DEFAULT 0,
+  total_users INTEGER DEFAULT 0,
   last_updated TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- System activity logging for cron transparency
+CREATE TABLE system_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  activity_type TEXT NOT NULL, -- 'sync', 'scoring', 'result', 'prediction'
+  status TEXT NOT NULL, -- 'success', 'failure'
+  message TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Enable RLS
