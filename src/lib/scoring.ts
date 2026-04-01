@@ -24,13 +24,17 @@ export const calculatePoints = (
   let points = 0;
   let isNeuralOverride = false;
 
+  const uWinner = (userWinner || "").trim().toLowerCase();
+  const aWinner = (aiWinner || "").trim().toLowerCase();
+  const actWinner = (actualWinner || "").trim().toLowerCase();
+
   // Correct Prediction: +100
-  if (userWinner.toLowerCase() === actualWinner.toLowerCase()) {
+  if (uWinner === actWinner) {
     points += 100;
 
     // Neural Override (Beat the AI): +50
     // Only if AI was WRONG and Human was RIGHT
-    if (aiWinner.toLowerCase() !== actualWinner.toLowerCase()) {
+    if (aWinner !== actWinner) {
       points += 50;
       isNeuralOverride = true;
     }
@@ -122,39 +126,39 @@ export const processAllPredictionsForMatch = async (
   // Collect unique user IDs from this match's predictions
   const uniqueUserIds = [...new Set(scoringResults.map((r) => r.user_id))];
 
-  // Parallelize profile updates for performance at scale
-  await Promise.all(uniqueUserIds.map(async (userId) => {
-    const { data: aggData, error: aggError } = await supabase
-      .from("predictions")
-      .select("points_won")
-      .eq("user_id", userId);
+    // Parallelize profile updates for performance at scale
+    await Promise.all(uniqueUserIds.map(async (userId) => {
+      // 1. Fetch current profile data to perform an incremental update
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("points, matches_predicted, accuracy")
+        .eq("id", userId)
+        .single();
+      // 1. Fetch ALL prediction history to ensure accuracy is calculated from the full dataset
+      const { data: history, error: historyError } = await supabase
+        .from("predictions")
+        .select("points_won")
+        .eq("user_id", userId);
 
-    if (aggError || !aggData) {
-      console.error(
-        `Scoring: Aggregate query failed for user ${userId}:`,
-        aggError
-      );
-      return;
-    }
+      if (historyError || !history) return;
 
-    const totalPredicted = aggData.length;
-    const totalPoints = aggData.reduce(
-      (sum, p) => sum + (p.points_won || 0),
-      0
-    );
-    const totalCorrect = aggData.filter((p) => (p.points_won || 0) > 0).length;
-    const newAccuracy =
-      totalPredicted > 0 ? (totalCorrect / totalPredicted) * 100 : 0;
+      const totalPredicted = history.length;
+      const totalCorrect = history.filter((p) => (p.points_won || 0) > 0).length;
+      const newAccuracy = totalPredicted > 0 ? (totalCorrect / totalPredicted) * 100 : 0;
 
-    await supabase
-      .from("profiles")
-      .update({
-        points: totalPoints,
-        matches_predicted: totalPredicted,
-        accuracy: Math.round(newAccuracy * 10) / 10,
-      })
-      .eq("id", userId);
-  }));
+      // 2. ATOMIC UPDATE: Increment points and update stats based on verified history
+      const matchPoints = scoringResults.find(r => r.user_id === userId)?.points_won || 0;
+      const updatedTotalPoints = (profile?.points || 0) + matchPoints;
+      
+      await supabase
+        .from("profiles")
+        .update({
+          points: updatedTotalPoints,
+          matches_predicted: totalPredicted,
+          accuracy: Math.round(newAccuracy * 10) / 10,
+        })
+        .eq("id", userId);
+    }));
 
   // ── Step 6: Calculate and store "Outfoxed" count ─────────────────────────
   // A strategist "outfoxes" the AI if AI was WRONG and they were RIGHT.
@@ -225,6 +229,135 @@ export const processAllPredictionsForMatch = async (
   );
   return { success: true, processed: predictions.length };
 };
+
+/**
+ * THE GLOBAL AUDIT (Restoration Protocol)
+ * Recalculates all strategist stats based on historical prediction truth.
+ */
+export async function systemGlobalAudit() {
+  const supabase = await createServiceClient();
+  console.log("Strategic Audit: Starting Global Point Reconstruction...");
+
+  // 1. Fetch all COMPLETED nodes
+  const { data: matches } = await supabase
+    .from("matches")
+    .select("id, winner, ai_prediction, team_a, team_b")
+    .eq("status", "completed")
+    .not("winner", "is", null);
+
+  if (!matches || matches.length === 0) return { success: true, message: "No static data found to audit." };
+
+  // 2. Fetch ALL prediction history (Bypass the 1,000 row default limit)
+  let allPredictions: any[] = [];
+  let from = 0;
+  const chunk = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data: batch, error: batchErr } = await supabase
+      .from("predictions")
+      .select("*")
+      .range(from, from + chunk - 1);
+    
+    if (batchErr || !batch) break;
+    allPredictions = [...allPredictions, ...batch];
+    if (batch.length < chunk) hasMore = false;
+    from += chunk;
+  }
+  
+  if (allPredictions.length === 0) return { success: false, error: "Database link lost or no prediction history found." };
+  console.log(`Strategic Audit: Universal Vision Active. Scanning ${allPredictions.length} prediction nodes...`);
+
+  // 3. Batch repair individual prediction records
+  const correctedPredictions = allPredictions.map(pred => {
+    const match = matches.find(m => m.id === pred.match_id);
+    if (!match) return null;
+
+    const { points, isNeuralOverride } = calculatePoints(
+      pred.prediction,
+      match.ai_prediction || "",
+      match.winner!
+    );
+    
+    // Debug Trace for specific Match ID (PBKS vs GT)
+    if (match.team_a === 'PBKS' || match.team_b === 'PBKS') {
+        process.stdout.write(`Strategic Audit Trace [${match.team_a} vs ${match.team_b}]: User -> ${pred.prediction} | AI -> ${match.ai_prediction} | Winner -> ${match.winner} | CALC -> ${points}pts\n`);
+    }
+
+    return {
+      ...pred, // Spread the original record to preserve user_id, match_id, and prediction
+      points_won: points,
+      is_neural_override: isNeuralOverride,
+      is_correct: points > 0
+    };
+  }).filter(p => p !== null);
+
+  if (correctedPredictions.length > 0) {
+    console.log(`Strategic Audit: Transmitting ${correctedPredictions.length} repaired records to the mainframe...`);
+    const { error: updError, data: upsertData } = await supabase
+        .from("predictions")
+        .upsert(correctedPredictions, { onConflict: 'id' })
+        .select('id, points_won');
+        
+    if (updError) {
+        console.error("CRITICAL: Audit Upsert Failed!", updError);
+        await logSystemActivity('audit', 'failure', `Upsert Failure: ${updError.message}`);
+        return { success: false, error: updError.message };
+    }
+    console.log(`Strategic Audit: DB successfully integrated ${upsertData?.length || 0} corrections.`);
+  }
+
+  // 4. Rebuild all Profiles from historical truth
+  const userIds = [...new Set(allPredictions.map(p => p.user_id))];
+  
+  await Promise.all(userIds.map(async (userId) => {
+    const userPredictions = allPredictions.filter(p => p.user_id === userId);
+    
+    const totalPoints = userPredictions.reduce((sum, p) => {
+        const corrected = correctedPredictions.find(cp => cp?.id === p.id);
+        return sum + (corrected?.points_won || 0);
+    }, 0);
+
+    const totalCorrect = userPredictions.filter(p => {
+        const corrected = correctedPredictions.find(cp => cp?.id === p.id);
+        return (corrected?.points_won || 0) > 0;
+    }).length;
+
+    const accuracy = userPredictions.length > 0 ? (totalCorrect / userPredictions.length) * 100 : 0;
+
+    await supabase
+      .from("profiles")
+      .update({
+        points: totalPoints,
+        total_points: totalPoints, // Synchronize legacy/secondary points columns
+        matches_predicted: userPredictions.length,
+        accuracy: Math.round(accuracy * 10) / 10
+      })
+      .eq("id", userId);
+  }));
+
+  // 5. Force re-sync of Human/AI global totals
+  const { data: allProfiles } = await supabase.from("profiles").select("accuracy, points").eq("is_ai", false);
+  if (allProfiles) {
+    const humanPointsTotal = allProfiles.reduce((acc, p) => acc + (p.points || 0), 0);
+    const avgAccuracy = allProfiles.reduce((acc, p) => acc + (p.accuracy || 0), 0) / (allProfiles.length || 1);
+    
+    // Get AI's official score from its profile (System UUID)
+    const { data: aiProfile } = await supabase.from("profiles").select("points").eq("id", "00000000-0000-0000-0000-000000000001").single();
+
+    await supabase.from("global_stats").upsert({
+      sport: 'cricket',
+      human_accuracy: Math.round(avgAccuracy * 10) / 10,
+      human_points_total: humanPointsTotal,
+      ai_points_total: aiProfile?.points || 0,
+      total_matches: matches.length,
+      last_updated: new Date().toISOString()
+    }, { onConflict: 'sport' });
+  }
+
+  await logSystemActivity('audit', 'success', `Global Audit completed for ${userIds.length} strategists.`);
+  return { success: true, auditedUsers: userIds.length };
+}
 
 /**
  * Diagnostic Logging System

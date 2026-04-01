@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" data-scroll-behavior="smooth">
       <body className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} font-body bg-background text-foreground antialiased min-h-screen overflow-x-hidden`}>
         {children}
       </body>

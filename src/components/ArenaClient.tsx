@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Match, Profile } from "@/types";
-import { AVATARS, ALL_IDENTITIES, MR_PREDICTO_AVATAR } from "@/lib/constants";
+import { AVATARS, ALL_IDENTITIES, MR_PREDICTO_AVATAR, ALPHA_HUMAN_AVATAR } from "@/lib/constants";
 import Navbar from "@/components/Navbar";
 import { cn } from "@/lib/utils";
 import { 
@@ -180,16 +180,16 @@ export default function ArenaClient({
                      <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0 [animation-delay:1s]", humanLead >= 0 ? "border-primary/20" : "border-secondary/20")}></div>
                      <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0 [animation-delay:2s]", humanLead >= 0 ? "border-primary/10" : "border-secondary/10")}></div>
 
-                     <div className="relative z-10 w-32 h-32 flex items-center justify-center">
+                     <div className="relative z-10 w-40 h-40 flex items-center justify-center">
                         {humanLead >= 0 ? (
-                          <div className="relative w-20 h-20 flex items-center justify-center">
-                             <User size={64} className="text-primary animate-pulse" />
+                          <div className="relative w-36 h-36 hex-clip border border-primary/30 shadow-[0_0_40px_#81ecff] group/avatar">
+                             <Image src={ALPHA_HUMAN_AVATAR.path!} fill sizes="144px" className="object-cover" alt="Alpha Strategist" />
                              {/* Scanning Line HUD */}
                              <div className="absolute inset-x-0 h-0.5 bg-primary/40 shadow-[0_0_12px_#81ecff] animate-scan-line z-20"></div>
                           </div>
                         ) : (
-                          <div className="relative w-24 h-24 hex-clip border border-secondary/30 shadow-[0_0_30px_#ff6b98] group/avatar">
-                             <Image src={MR_PREDICTO_AVATAR.path!} fill className="object-cover" alt="Mr. Predicto" />
+                          <div className="relative w-36 h-36 hex-clip border border-secondary/30 shadow-[0_0_40px_#ff6b98] group/avatar">
+                             <Image src={MR_PREDICTO_AVATAR.path!} fill sizes="144px" className="object-cover" alt="Mr. Predicto" />
                              {/* Scanning Line HUD */}
                              <div className="absolute inset-x-0 h-0.5 bg-secondary/40 shadow-[0_0_12px_#ff6b98] animate-scan-line z-20"></div>
                           </div>

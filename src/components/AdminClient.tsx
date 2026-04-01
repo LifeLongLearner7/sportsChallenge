@@ -15,12 +15,14 @@ import {
   UserPlus,
   BarChart3,
   TrendingUp,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from "lucide-react";
 import { systemAutomatedSync } from "@/lib/ai-actions";
 import { adminSignUp } from "@/lib/auth-actions";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { manualPurgeMessages, triggerCachePurge } from "@/lib/data-actions";
 
 interface AdminClientProps {
   profile: Profile | null;
@@ -46,6 +48,10 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [isRefreshingCache, setIsRefreshingCache] = useState(false);
+  const [confirmPurge, setConfirmPurge] = useState(false);
+  const [confirmCache, setConfirmCache] = useState(false);
 
   const [syncLogs, setSyncLogs] = useState<{ id: number; msg: string; type: 'info' | 'success' | 'err' }[]>([]);
 
@@ -55,6 +61,36 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
 
   const addLog = (msg: string, type: 'info' | 'success' | 'err' = 'info') => {
     setSyncLogs(prev => [{ id: Date.now(), msg, type }, ...prev]);
+  };
+
+  const handlePurgeMessages = async () => {
+    try {
+      setIsPurging(true);
+      addLog("Tactical Scrub Initiated: Purging messages older than 24H...", "info");
+      const { manualPurgeMessages } = await import("@/lib/data-actions");
+      const result = await manualPurgeMessages();
+      addLog(`SCRUB SUCCESSFUL: Removed ${result.purgedCount} expired tactical entries.`, "success");
+      setConfirmPurge(false);
+    } catch (err) {
+      addLog("SCRUB FAILURE: Database firewall rejected deletion.", "err");
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
+  const handleManualCacheRefresh = async () => {
+    try {
+      setIsRefreshingCache(true);
+      addLog("Cache Flush Initiated: Invalidating global data tags...", "info");
+      const { triggerCachePurge } = await import("@/lib/data-actions");
+      await triggerCachePurge();
+      addLog("CACHE FLUSHED: Viewports re-calibrated across all nodes.", "success");
+      setConfirmCache(false);
+    } catch (err) {
+      addLog("FLUSH FAILURE: Next.js revalidation engine error.", "err");
+    } finally {
+      setIsRefreshingCache(false);
+    }
   };
 
   const handlePulseTrigger = async () => {
@@ -137,7 +173,7 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
                 </h1>
               </div>
               <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] bg-white/5 w-fit px-3 py-1 rounded">
-                 High-Altitude Operational Controls | v3.2 Intel-Enabled
+                 High-Altitude Operational Controls
               </p>
            </div>
 
@@ -169,14 +205,14 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
                    <Zap size={14} className="text-primary" /> Operational Pulse
                  </h3>
                  
-                 <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-4">
                     <button 
                       onClick={handlePulseTrigger}
                       disabled={isSyncing}
                       className={cn(
                         "w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black uppercase text-xs tracking-widest transition-all",
                         isSyncing 
-                          ? "bg-white/5 text-slate-500 cursor-not-allowed" 
+                          ? "bg-white/5 text-slate-500 cursor-not-allowed border border-white/5" 
                           : "bg-primary text-slate-950 hover:bg-white active:scale-95 shadow-[0_0_20px_rgba(129,236,255,0.2)]"
                       )}
                     >
@@ -185,8 +221,91 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
                     </button>
                     
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter leading-relaxed">
-                      Resolves yesterday's results and generates new AI predictions for today's active operational zones.
+                      Resolves yesterday's results and updates all predictions.
                     </p>
+                 </div>
+              </div>
+
+              {/* Maintenance Controls */}
+              <div className="glass-panel p-8 rounded-2xl border-white/5 bg-black/40">
+                 <h3 className="text-xs font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <Activity size={14} className="text-slate-400" /> Tactical Maintenance
+                 </h3>
+
+                 <div className="flex flex-col gap-6">
+                    {/* Cache Purge */}
+                    <div className="flex flex-col gap-3">
+                       <AnimatePresence mode="wait">
+                          {!confirmCache ? (
+                            <motion.button
+                              key="cache-btn"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              onClick={() => setConfirmCache(true)}
+                              className="w-full py-4 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-slate-950 hover:border-transparent text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-lg active:scale-95"
+                            >
+                               <RefreshCcw size={16} /> Force View Sync
+                            </motion.button>
+                          ) : (
+                            <motion.div
+                              key="cache-confirm"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="bg-primary/10 border border-primary/20 p-4 rounded-xl flex flex-col gap-3"
+                            >
+                               <p className="text-[9px] font-black text-primary uppercase text-center">Confirm Cache Flush?</p>
+                               <div className="flex gap-2">
+                                  <button 
+                                    onClick={handleManualCacheRefresh} 
+                                    disabled={isRefreshingCache}
+                                    className="flex-1 py-2 bg-primary text-slate-950 rounded font-black text-[9px] uppercase hover:bg-white"
+                                  >
+                                     {isRefreshingCache ? "Processing..." : "Confirm"}
+                                  </button>
+                                  <button onClick={() => setConfirmCache(false)} className="px-3 py-2 bg-white/5 text-white rounded font-black text-[9px] uppercase hover:bg-white/10">ESC</button>
+                               </div>
+                            </motion.div>
+                          )}
+                       </AnimatePresence>
+                    </div>
+
+                    {/* Message Purge */}
+                    <div className="flex flex-col gap-3">
+                       <AnimatePresence mode="wait">
+                          {!confirmPurge ? (
+                             <motion.button
+                                key="purge-btn"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setConfirmPurge(true)}
+                                className="w-full py-4 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(239,68,68,0.1)] active:scale-95"
+                             >
+                                <Trash2 size={16} /> Scrub Comm-Link
+                             </motion.button>
+                          ) : (
+                             <motion.div
+                                key="purge-confirm"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex flex-col gap-3"
+                             >
+                                <p className="text-[9px] font-black text-red-500 uppercase text-center">Execute 24H Scrub?</p>
+                                <div className="flex gap-2">
+                                   <button 
+                                     onClick={handlePurgeMessages} 
+                                     disabled={isPurging}
+                                     className="flex-1 py-2 bg-red-500 text-white rounded font-black text-[9px] uppercase hover:bg-red-600 shadow-lg shadow-red-500/20"
+                                   >
+                                      {isPurging ? "Scrubbing..." : "Confirm Purge"}
+                                   </button>
+                                   <button onClick={() => setConfirmPurge(false)} className="px-3 py-2 bg-white/5 text-white rounded font-black text-[9px] uppercase hover:bg-white/10">ESC</button>
+                                </div>
+                             </motion.div>
+                          )}
+                       </AnimatePresence>
+                    </div>
                  </div>
               </div>
 

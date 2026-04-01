@@ -65,13 +65,13 @@ export default function LandingHero({ stats }: LandingHeroProps) {
              Thousands of humans are already predicting...
           </div>
 
-          {/* Top Predictor Highlight Card - Anchored to action belt on desktop, flows below on mobile */}
-          <div className="mt-6 lg:mt-0 relative lg:absolute lg:left-full lg:ml-12 lg:top-1/2 lg:-translate-y-1/2 z-20 pointer-events-none w-full sm:w-80 lg:w-64">
+          {/* Top Predictor Highlight Card - Only visible on Ultra-Wide screens (xl+) */}
+          <div className="hidden xl:block absolute left-full ml-12 top-1/2 -translate-y-1/2 z-20 pointer-events-none w-64">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.8, x: 20 }}
-              animate={{ opacity: 1, scale: 1, x: 0, rotate: -6 }}
-              transition={{ delay: 0.8, duration: 1, type: "spring" }}
-              className="glass-panel p-5 rounded-2xl border-white/10 bg-slate-900/40 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col gap-4 border-r border-b border-primary/10"
+               initial={{ opacity: 0, scale: 0.8, x: 20 }}
+               animate={{ opacity: 1, scale: 1, x: 0, rotate: -6 }}
+               transition={{ delay: 0.8, duration: 1, type: "spring" }}
+               className="glass-panel p-5 rounded-2xl border-white/10 bg-slate-900/40 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col gap-4 border-r border-b border-primary/10"
             >
                 <div className="flex gap-4 items-center">
                   <div className="w-12 h-12 bg-secondary/10 border border-secondary/30 flex items-center justify-center relative shadow-[0_0_20px_rgba(255,107,152,0.15)]" style={{ clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' }}>
@@ -144,19 +144,38 @@ export default function LandingHero({ stats }: LandingHeroProps) {
         </AnimatePresence>
       </div>
 
-      {/* Feature Grid */}
-      <div className="grid grid-cols-2 gap-4 mt-8">
+      {/* Feature Grid - Responsive based on screen width */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4 mt-8">
         <div className="p-6 glass-panel rounded-xl flex flex-col gap-2 group hover:bg-surface-container-high transition-colors">
           <Zap className="text-primary" size={32} />
           <h3 className="font-headline font-bold text-lg uppercase tracking-tight">LIVE INSIGHTS</h3>
           <p className="text-xs text-on-surface-variant">Real-time data powering your predictions</p>
         </div>
+        
         <div className="p-6 glass-panel rounded-xl flex flex-col gap-2 group hover:bg-surface-container-high transition-colors">
           <div className="relative w-8 h-8 hex-clip border border-secondary/30 shadow-[0_0_15px_rgba(255,107,152,0.4)] overflow-hidden">
-             <NextImage src={MR_PREDICTO_AVATAR.path!} fill className="object-cover" alt="Mr. Predicto" />
+             <NextImage 
+               src={MR_PREDICTO_AVATAR.path!} 
+               fill 
+               sizes="32px"
+               className="object-cover" 
+               alt="Mr. Predicto" 
+             />
           </div>
           <h3 className="font-headline font-bold text-lg uppercase tracking-tight">MR. PREDICTO</h3>
-          <p className="text-xs text-on-surface-variant">Beat our AI rival — powered by GPT‑4o neural analysis.</p>
+          <p className="text-xs text-on-surface-variant">Beat our AI rival - an advanced Machine Learning model</p>
+        </div>
+
+        {/* Top Predictor Card - Replaces floating version on smaller screens (below xl) */}
+        <div className="xl:hidden p-6 glass-panel rounded-xl flex flex-col gap-2 group hover:bg-surface-container-high transition-colors sm:col-span-2 md:col-span-1">
+           <Trophy className="text-secondary" size={32} />
+           <div className="flex flex-col">
+              <h3 className="font-headline font-bold text-lg uppercase tracking-tight">TOP PREDICTOR</h3>
+              <div className="flex items-center gap-2">
+                 <span className="text-white font-black uppercase text-sm italic">{topPredictor?.screen_name || "STRIKER_X"}</span>
+                 <span className="text-secondary font-black text-xs">{topPredictor?.accuracy || 0}% ACC</span>
+              </div>
+           </div>
         </div>
       </div>
     </div>

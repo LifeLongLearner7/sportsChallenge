@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useCallback } from "react";
-import { updateMatchWinner, triggerManualSync } from "@/lib/data-actions";
+import { updateMatchWinner, triggerManualSync, triggerGlobalAudit, triggerCachePurge } from "@/lib/data-actions";
 import { Match, Profile } from "@/types";
 import { useRouter } from "next/navigation";
 import { 
@@ -23,6 +23,7 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
   const [matches, setMatches] = useState<Match[]>(initialMatches);
   const [syncing, setSyncing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'info' | 'error' | 'success' } | null>(null);
+  const [showAuditConfirm, setShowAuditConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -49,6 +50,33 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
     });
   };
 
+  const handleGlobalAudit = async () => {
+    setShowAuditConfirm(false);
+    setSyncing(true);
+    setStatusMessage({ text: "Initiating Deep Sector Audit...", type: "info" });
+    try {
+      const result = await triggerGlobalAudit();
+      await fetchMatches();
+      setStatusMessage({ text: `Audit Complete: ${result.auditedUsers} strategists re-calibrated.`, type: "success" });
+    } catch (error) {
+      setStatusMessage({ text: "System Audit Failure: Data reconstruction aborted.", type: "error" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleCachePurge = async () => {
+    setSyncing(true);
+    setStatusMessage({ text: "Purging Synthetic Cache...", type: "info" });
+    try {
+      const result = await triggerCachePurge();
+      setStatusMessage({ text: `Global Cache Wiped: ${result.pathsCleared} sectors revalidated.`, type: "success" });
+    } catch (error) {
+      setStatusMessage({ text: "Cache Purge Failure: System memory locked.", type: "error" });
+    } finally {
+      setSyncing(false);
+    }
+  };
   const handleManualSync = async () => {
     setSyncing(true);
     setStatusMessage({ text: "Initiating Global Synchronization...", type: "info" });
@@ -111,8 +139,48 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
           >
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
             <span className="font-mono text-xs font-bold tracking-widest uppercase">Trigger Strategic Pulse</span>
-            <div className="absolute inset-0 bg-white/5 blur opacity-0 group-hover:opacity-100 transition-opacity rounded-full -z-10" />
           </button>
+
+          <button 
+            onClick={handleCachePurge}
+            disabled={syncing || isPending}
+            className="relative group px-6 py-3 bg-white/5 border border-white/10 rounded-full flex items-center gap-2 hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <Flame className="w-4 h-4 text-orange-400" />
+            <span className="font-mono text-xs font-bold tracking-widest uppercase">Purge System Cache</span>
+          </button>
+
+          {!showAuditConfirm ? (
+            <button 
+              onClick={() => setShowAuditConfirm(true)}
+              disabled={syncing || isPending}
+              className="relative group px-6 py-3 bg-red-500/10 border border-red-500/20 rounded-full flex items-center gap-2 hover:bg-red-500/20 transition-all active:scale-95 disabled:opacity-50"
+            >
+              <Binary className="w-4 h-4 text-red-400" />
+              <span className="font-mono text-xs font-bold tracking-widest uppercase text-red-400">System Data Audit</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 transition-all">
+               <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Awaiting Confirmation</span>
+                  <span className="text-[8px] font-mono text-white/30 uppercase">Full point & accuracy reconstruction</span>
+               </div>
+               <div className="flex gap-2">
+                 <button 
+                    onClick={handleGlobalAudit}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors"
+                  >
+                    Confirm Clear-Audit
+                  </button>
+                  <button 
+                    onClick={() => setShowAuditConfirm(false)}
+                    className="px-4 py-2 bg-white/10 text-white/60 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-white/20 transition-colors"
+                  >
+                    Abort
+                  </button>
+               </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

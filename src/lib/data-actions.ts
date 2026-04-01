@@ -2,7 +2,7 @@
 
 import { createClient } from "./auth-actions";
 import { Match, Prediction, Profile } from "@/types";
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath, unstable_cache, revalidateTag } from "next/cache";
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 const staticSupabase = createSupabaseClient(
@@ -19,6 +19,35 @@ async function requireAdmin() {
   if (!data?.is_admin) throw new Error("Forbidden: Admin privileges required");
   return user;
 }
+
+export const triggerCachePurge = async () => {
+  await requireAdmin();
+  
+  // 1. Clear Data Cache Tags (Back-end)
+  const tags = [
+    "all-matches",
+    "platform-stats",
+    "total-strategists",
+    "user-detailed-history",
+    "landing-stats",
+    "leaderboard-list",
+    "user-rank",
+    "completed-matches",
+    "arena-messages"
+  ];
+  
+  // Use explicit revalidation with the 'max' argument to satisfy environment protocols
+  tags.forEach(tag => revalidateTag(tag, 'max'));
+
+  // 2. Clear Page Cache Paths (Front-end)
+  const paths = ["/", "/dashboard", "/leaderboard", "/arena", "/admin/matches", "/profile"];
+  paths.forEach(path => {
+    revalidatePath(path, 'page');
+    revalidatePath(path, 'layout');
+  });
+  
+  return { success: true, pathsCleared: paths.length, tagsCleared: tags.length };
+};
 
 export const getMatches = unstable_cache(
   async () => {
@@ -39,7 +68,7 @@ export const getMatches = unstable_cache(
     }
   },
   ["all-matches"],
-  { revalidate: 3600 }
+  { revalidate: 3600, tags: ["all-matches"] }
 );
 
 export async function getUserProfile() {
@@ -127,7 +156,7 @@ export const getPlatformStats = unstable_cache(
     }
   },
   ["platform-stats"],
-  { revalidate: 3600 }
+  { revalidate: 3600, tags: ["platform-stats"] }
 );
 
 /** Backwards-compatible: Leaderboard page expects this shape */
@@ -158,7 +187,7 @@ export const getTotalStrategists = unstable_cache(
     return count || 0;
   },
   ["total-strategists"],
-  { revalidate: 28800 }
+  { revalidate: 28800, tags: ["total-strategists"] }
 );
 
 export async function getUserPredictions() {
@@ -200,7 +229,7 @@ export const getUserDetailedHistory = unstable_cache(
     }
   },
   ["user-detailed-history"], 
-  { revalidate: 60, tags: ["user-history"] }
+  { revalidate: 60, tags: ["user-detailed-history"] }
 );
 
 export async function submitPrediction(matchId: string, predictedWinner: string) {
@@ -345,25 +374,29 @@ export async function getArenaStats() {
 }
 
 // Tactical Comm-Link (Discussion) Actions
-const purgeOldMessages = unstable_cache(
-  async () => {
-    const internalExp = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    await staticSupabase
-      .from("arena_messages")
-      .delete()
-      .lt("created_at", internalExp);
-    return Date.now();
-  },
-  ["purge-arena-messages"],
-  { revalidate: 14400 } // 4 hours
-);
+export async function manualPurgeMessages() {
+  await requireAdmin();
+  const { createServiceClient } = await import("./auth-actions");
+  const supabase = await createServiceClient();
+  
+  const expiry = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  
+  const { error, count } = await supabase
+    .from("arena_messages")
+    .delete({ count: 'exact' })
+    .lt("created_at", expiry);
+
+  if (error) throw error;
+  
+  revalidateTag("arena-messages", 'max');
+  revalidatePath("/arena", 'layout');
+  
+  return { success: true, purgedCount: count || 0 };
+}
 
 export const getArenaMessages = unstable_cache(
   async () => {
-    // 1. Automatic 24-hour Purge (Runs once every 6 hours via dedicated cache)
-    await purgeOldMessages();
-
-    // 2. Fetch Fresh Feed
+    // Fresh Feed Fetch
     const { data, error } = await staticSupabase
       .from("arena_messages")
       .select(`
@@ -531,5 +564,11 @@ export async function triggerManualSync() {
   const { systemAutomatedSync } = await import("./ai-actions");
   const result = await systemAutomatedSync();
   return result;
+}
+
+export async function triggerGlobalAudit() {
+  await requireAdmin();
+  const { systemGlobalAudit } = await import("./scoring");
+  return await systemGlobalAudit();
 }
 

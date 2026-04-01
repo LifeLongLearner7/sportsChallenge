@@ -21,7 +21,6 @@ export const AVATARS: AvatarOption[] = [
   { id: "pulse_architect", name: "Pulse Architect", path: "/assets/avatars/pulse_architect.png", color: "text-primary", bg: "bg-primary/20", glow: "shadow-[0_0_30px_rgba(129,236,255,0.5)]" },
 ];
 
-// Special system-only identities (not for user selection)
 export const MR_PREDICTO_AVATAR: AvatarOption = {
   id: "mr_predicto",
   name: "Mr. Predicto",
@@ -29,6 +28,15 @@ export const MR_PREDICTO_AVATAR: AvatarOption = {
   color: "text-secondary",
   bg: "bg-secondary/20",
   glow: "shadow-[0_0_30px_rgba(255,107,152,0.6)]"
+};
+
+export const ALPHA_HUMAN_AVATAR: AvatarOption = {
+  id: "alpha_human",
+  name: "Alpha Strategist",
+  path: "/assets/avatars/alpha_human.png",
+  color: "text-primary",
+  bg: "bg-primary/20",
+  glow: "shadow-[0_0_30px_rgba(129,236,255,0.6)]"
 };
 
 export const FACTIONS: AvatarOption[] = [

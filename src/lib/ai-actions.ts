@@ -62,13 +62,20 @@ export async function generateMatchPrediction(match: Match) {
  */
 export async function systemStatusSync() {
   const supabase = await createServiceClient();
-  const now = new Date();
   
-  // Get start and end of "today" in system local/UTC
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+  // 🛡️ IST Alignment: Explicitly calculate 'Today' in UTC+5:30
+  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+  const nowIST = new Date(Date.now() + IST_OFFSET);
+  
+  const year = nowIST.getUTCFullYear();
+  const month = nowIST.getUTCMonth();
+  const date = nowIST.getUTCDate();
 
-  console.log(`Strategic Pulse: Activating fixtures between ${startOfDay} and ${endOfDay}...`);
+  // Define the operational 'Today' window in UTC strings for DB comparison
+  const startOfDay = new Date(Date.UTC(year, month, date, 0, 0, 0)).toISOString();
+  const endOfDay = new Date(Date.UTC(year, month, date, 23, 59, 59)).toISOString();
+
+  console.log(`Strategic Pulse: Activating fixtures for ${year}-${month + 1}-${date} (IST Operational Window)...`);
 
   const { data: todayMatches, error } = await supabase
     .from("matches")
@@ -99,6 +106,7 @@ export async function systemStatusSync() {
   }
 
   revalidatePath("/dashboard");
+  revalidatePath("/arena");
   return { success: true, count: todayMatches?.length || 0 };
 }
 
@@ -147,17 +155,21 @@ export async function systemResultSync() {
          actualWinnerKey = determineWinner(externalMatch, match.team_a, match.team_b);
        }
 
-       if (actualWinnerKey) {
-         const actualWinnerName = actualWinnerKey === "team_a" ? match.team_a : match.team_b;
-         console.log(`Strategic Pulse: Match ${match.id} resolved as ${actualWinnerName}.`);
-         
-         await supabase
-           .from("matches")
-           .update({ winner: actualWinnerName, status: "completed" })
-           .eq("id", match.id);
+        if (actualWinnerKey) {
+          const actualWinnerName = actualWinnerKey === "team_a" ? match.team_a : match.team_b;
+          console.log(`Strategic Pulse: Match ${match.id} resolved as ${actualWinnerName}. Awarding points...`);
+          
+          // CRITICAL: Process points FIRST. If this fails, match status remains pending for retry.
+          await processAllPredictionsForMatch(match.id, actualWinnerName, match.ai_prediction);
 
-         await processAllPredictionsForMatch(match.id, actualWinnerName, match.ai_prediction);
-       }
+          // Update status only AFTER scoring success
+          await supabase
+            .from("matches")
+            .update({ winner: actualWinnerName, status: "completed" })
+            .eq("id", match.id);
+
+          console.log(`Strategic Pulse: Match ${match.id} finalized successfully.`);
+        }
     }
   }
 
