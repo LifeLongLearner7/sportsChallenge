@@ -71,31 +71,47 @@ export const getMatches = unstable_cache(
   { revalidate: 3600, tags: ["all-matches"] }
 );
 
+/**
+ * CACHED PROFILE FETCHER (Phase 4.2.1)
+ * Decoupled from the dynamic 'cookies' scope to satisfy unstable_cache requirements.
+ */
+const fetchProfileFromDb = unstable_cache(
+  async (userId: string, email?: string) => {
+    const { data: profile } = await staticSupabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (!profile) {
+      return {
+        id: userId,
+        screen_name: email?.split("@")[0] || "New Strategist",
+        points: 0,
+        matches_predicted: 0,
+        accuracy: 0,
+        is_admin: false,
+      } as Profile;
+    }
+
+    return profile as Profile;
+  },
+  ["user-profile-session"],
+  { revalidate: 1800, tags: ["user-profile-session"] }
+);
+
+/**
+ * DYNAMIC IDENTITY WRAPPER
+ * Retrieves the user identity via cookies and passes it to the cached fetcher.
+ */
 export async function getUserProfile() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return null;
   
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) {
-    // Return a basic profile object if the record is missing
-    return {
-      id: user.id,
-      screen_name: user.email?.split("@")[0] || "New Strategist",
-      points: 0,
-      matches_predicted: 0,
-      accuracy: 0,
-      is_admin: false,
-    } as Profile;
-  }
-
-  return profile as Profile;
+  // Pass stable ID and fallback email to the cached data layer
+  return await fetchProfileFromDb(user.id, user.email);
 }
 
 
@@ -275,21 +291,14 @@ export async function updateProfile(updates: Partial<Profile>) {
 
 export const getLandingStats = unstable_cache(
   async () => {
-    // 🚀 THE SCALING WIN: O(1) Fetch from global_stats table
-    const { data: stats } = await staticSupabase
-      .from("global_stats")
-      .select("*")
-      .eq("sport", "cricket")
-      .maybeSingle();
+    // 🔥 PARALLELIZED HIGH-VELOCITY FETCH
+    const [statsResult, topUserResult] = await Promise.all([
+      staticSupabase.from("global_stats").select("*").eq("sport", "cricket").maybeSingle(),
+      staticSupabase.from("profiles").select("screen_name, accuracy").eq("is_ai", false).order("points", { ascending: false }).limit(1).maybeSingle()
+    ]);
 
-    // Still need the top predictor separately as it's a specific record
-    const { data: topUser } = await staticSupabase
-      .from("profiles")
-      .select("screen_name, accuracy")
-      .eq("is_ai", false)
-      .order("points", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const stats = statsResult.data;
+    const topUser = topUserResult.data;
 
     if (!stats) {
       return {
@@ -309,6 +318,27 @@ export const getLandingStats = unstable_cache(
   },
   ["landing-stats"],
   { revalidate: 3600 }
+);
+
+
+/**
+ * DECOUPLED TOP PREDICTOR FETCH (Phase 4.2 Streaming)
+ * Separated from landing stats so it can be streamed independently
+ */
+export const getTopPredictor = unstable_cache(
+  async () => {
+    const { data: topUser } = await staticSupabase
+      .from("profiles")
+      .select("screen_name, accuracy")
+      .eq("is_ai", false)
+      .order("points", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return topUser || { screen_name: "STRIKER_X", accuracy: 89.4 };
+  },
+  ["top-predictor-solo"],
+  { revalidate: 600 }
 );
 
 

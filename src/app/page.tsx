@@ -1,8 +1,10 @@
 import Image from "next/image";
 import { Bot, Zap, Trophy } from "lucide-react";
+import React, { Suspense } from "react";
 import AuthPortal from "@/components/AuthPortal";
 import LandingHero from "@/components/LandingHero";
 import Footer from "@/components/Footer";
+import TopPredictorStream, { TopPredictorSkeleton } from "@/components/TopPredictorStream";
 import { getLandingStats } from "@/lib/data-actions";
 import { MR_PREDICTO_AVATAR } from "@/lib/constants";
 
@@ -15,7 +17,14 @@ export default async function LandingPage() {
       {/* Centered Brand Signature */}
       <div className="relative w-full z-50 flex flex-col items-center pt-10 pb-2 gap-4">
         <div className="w-20 h-20 relative animate-pulse">
-           <Image src="/logo.png" alt="Cyber Sports Logo" fill priority className="object-contain filter drop-shadow-[0_0_15px_rgba(0,229,255,0.6)]" sizes="(max-width: 768px) 80px, 80px" />
+           <Image 
+             src="/logo.png" 
+             alt="Cyber Sports Logo" 
+             fill 
+             priority 
+             className="object-contain filter drop-shadow-[0_0_15px_rgba(0,229,255,0.6)]" 
+             sizes="(max-width: 768px) 80px, 80px" 
+           />
         </div>
         <div className="text-4xl md:text-6xl font-black italic tracking-tighter text-primary drop-shadow-[0_0_15px_rgba(0,229,255,0.4)] font-headline uppercase select-none">
           CYBER-SPORTS
@@ -41,7 +50,6 @@ export default async function LandingPage() {
 
       {/* Full-Width Feature Row (Elite Row) */}
       <section className="relative z-10 max-w-screen-2xl mx-auto px-6 pb-24">
-        {/* ... card content already here from previous full-replace ... */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1: Live Insights */}
           <div className="p-8 glass-panel rounded-2xl flex flex-col gap-5 group hover:bg-surface-container-high transition-all border-white/5 hover:border-primary/30">
@@ -75,36 +83,10 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          {/* Card 3: Top Predictor */}
-          <div className="p-8 glass-panel rounded-2xl flex flex-col gap-5 group hover:bg-surface-container-high transition-all border-white/5 hover:border-primary/30">
-             <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-primary/10 border border-primary/30 flex items-center justify-center hex-clip shadow-[0_0_20px_rgba(129,236,255,0.2)]">
-                   <Trophy className="text-primary" size={28} />
-                </div>
-                <h3 className="font-headline font-black text-2xl uppercase tracking-tighter italic text-white/50">
-                   TOP <span className="text-primary/70">PREDICTOR</span>
-                </h3>
-             </div>
-
-             <div className="flex flex-col gap-2">
-                <div className="w-full text-center text-primary font-headline font-black uppercase text-3xl italic tracking-tighter drop-shadow-[0_0_12px_rgba(129,236,255,0.7)]">
-                   {stats.topPredictor?.screen_name || "STRIKER_X"}
-                </div>
-                
-                <div className="mt-2 bg-black/60 rounded-xl p-4 border border-white/5 shadow-inner flex flex-col gap-3">
-                   <div className="flex justify-between items-center text-[10px] font-black text-primary uppercase tracking-[0.2em] leading-none">
-                      <span>Tactical Win Rate</span>
-                      <span className="text-white italic">{stats.topPredictor?.accuracy || 0}%</span>
-                   </div>
-                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden p-[1px] relative">
-                      <div 
-                         className="h-full bg-gradient-to-r from-primary/40 via-primary to-primary-dim rounded-full shadow-[0_0_15px_rgba(129,236,255,0.4)] transition-all duration-1000"
-                         style={{ width: `${stats.topPredictor?.accuracy || 0}%` }}
-                      />
-                   </div>
-                </div>
-             </div>
-          </div>
+          {/* Card 3: Top Predictor (INDEPENDENT STREAM) */}
+          <Suspense fallback={<TopPredictorSkeleton />}>
+            <TopPredictorStream />
+          </Suspense>
         </div>
       </section>
 

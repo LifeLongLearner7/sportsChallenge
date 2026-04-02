@@ -71,10 +71,10 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
                 <User size={18} />
               </div>
             </div>
-            <p className="text-[9px] text-slate-500 font-medium px-1 uppercase tracking-tight">This is your public identifier across all IPL 2026 leaderboards.</p>
+            <p className="text-[9px] text-slate-500 font-medium px-1 uppercase tracking-tight">THIS IS YOUR PUBLIC IDENTIFIER ACROSS ALL SCREENS.</p>
           </div>
 
-          <div className="flex flex-col gap-6 mt-4">
+          <div className="flex flex-col gap-4 mt-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                    <ShieldCheck size={14} className="text-secondary" />
@@ -83,29 +83,39 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
                 <span className="text-[10px] font-black text-secondary uppercase italic">Military (AES-256)</span>
             </div>
             
-            <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              className={cn(
-                "w-full py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[12px] flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-lg",
-                isSaving 
-                  ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
-                  : saveSuccess 
-                    ? "bg-green-500/20 text-green-400 border border-green-500/50"
-                    : "bg-primary text-white shadow-[0_0_20px_rgba(129,236,255,0.4)] hover:shadow-[0_0_30px_rgba(129,236,255,0.6)] hover:-translate-y-0.5"
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={handleSave}
+                disabled={isSaving}
+                className={cn(
+                  "w-full py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[12px] flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-lg",
+                  isSaving 
+                    ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
+                    : saveSuccess 
+                      ? "bg-green-500/20 text-green-400 border border-green-500/50"
+                      : "bg-primary text-white shadow-[0_0_20px_rgba(129,236,255,0.4)] hover:shadow-[0_0_30px_rgba(129,236,255,0.6)] hover:-translate-y-0.5"
+                )}
+              >
+                {isSaving ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : saveSuccess ? (
+                  <>IDENTITY UPDATED</>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    Commit Changes
+                  </>
+                )}
+              </button>
+
+              {saveSuccess && (
+                <div className="text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                  <p className="text-[10px] font-bold text-green-400/70 uppercase tracking-widest italic">
+                    the changes will update slowly across all screens
+                  </p>
+                </div>
               )}
-            >
-              {isSaving ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              ) : saveSuccess ? (
-                <>IDENTITY UPDATED</>
-              ) : (
-                <>
-                  <Save size={18} />
-                  Commit Changes
-                </>
-              )}
-            </button>
+            </div>
           </div>
         </section>
 

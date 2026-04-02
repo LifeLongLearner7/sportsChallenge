@@ -1,33 +1,47 @@
-import Navbar from "@/components/Navbar";
+"use client";
+
+import React from 'react';
 
 export default function DashboardLoading() {
   return (
-    <main className="min-h-screen bg-background pt-24 pb-12 px-6">
-      {/* We can provide a basic skeleton Navbar here or allow Next.js to preserve the layout */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-slate-950/60 backdrop-blur-xl border-b border-cyan-500/15 shadow-[0_4px_20px_rgba(0,0,0,0.5)] h-20 animate-pulse"></nav>
-      
-      <div className="max-w-screen-2xl mx-auto grid lg:grid-cols-12 gap-8 animate-pulse">
-        {/* Left Column Skeleton */}
-        <div className="lg:col-span-3 flex flex-col gap-6">
-          <div className="glass-panel p-6 rounded-2xl h-48 border-white/5 bg-white/5"></div>
-          <div className="glass-panel p-6 rounded-2xl h-64 border-white/5 bg-white/5"></div>
+    <div className="min-h-screen bg-background p-4 md:p-8 flex flex-col gap-8 animate-in fade-in duration-500">
+      {/* Header Skeleton */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex flex-col gap-2">
+          <div className="h-4 w-32 bg-white/5 rounded-full animate-pulse" />
+          <div className="h-10 w-64 bg-white/5 rounded-lg animate-pulse" />
         </div>
+        <div className="flex gap-4">
+          <div className="w-12 h-12 rounded-lg bg-white/5 animate-pulse" />
+          <div className="w-12 h-12 rounded-lg bg-white/5 animate-pulse" />
+        </div>
+      </div>
 
-        {/* Center Column Skeleton */}
-        <div className="lg:col-span-6 flex flex-col gap-8">
-          <div className="h-16 w-3/4 bg-white/5 rounded-xl border border-white/5"></div>
-          <div className="flex flex-col gap-6">
-            <div className="glass-panel h-64 rounded-2xl border-white/5 bg-white/5"></div>
-            <div className="glass-panel h-64 rounded-2xl border-white/5 bg-white/5"></div>
+      {/* Stats Grid Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-32 glass-panel border border-white/5 rounded-xl animate-pulse" />
+        ))}
+      </div>
+
+      {/* Main Content (Arena Logic) Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Match Stream (Left) */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="h-8 w-48 bg-white/5 rounded-lg animate-pulse" />
+          <div className="flex flex-col gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-48 glass-panel border border-white/5 rounded-2xl animate-pulse" />
+            ))}
           </div>
         </div>
 
-        {/* Right Column Skeleton */}
-        <div className="lg:col-span-3 flex flex-col gap-6">
-          <div className="glass-panel p-6 rounded-2xl h-64 border-white/5 bg-white/5"></div>
-          <div className="glass-panel p-6 rounded-2xl h-64 border-white/5 bg-white/5"></div>
+        {/* Tactical Dossier (Right) */}
+        <div className="flex flex-col gap-6">
+          <div className="h-8 w-48 bg-white/5 rounded-lg animate-pulse" />
+          <div className="h-[600px] glass-panel border border-white/5 rounded-2xl animate-pulse" />
         </div>
       </div>
-    </main>
+    </div>
   );
 }
