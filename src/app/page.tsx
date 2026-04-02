@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Bot, Zap, Trophy } from "lucide-react";
 import AuthPortal from "@/components/AuthPortal";
 import LandingHero from "@/components/LandingHero";
+import Footer from "@/components/Footer";
 import { getLandingStats } from "@/lib/data-actions";
 import { MR_PREDICTO_AVATAR } from "@/lib/constants";
 
@@ -40,6 +41,7 @@ export default async function LandingPage() {
 
       {/* Full-Width Feature Row (Elite Row) */}
       <section className="relative z-10 max-w-screen-2xl mx-auto px-6 pb-24">
+        {/* ... card content already here from previous full-replace ... */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1: Live Insights */}
           <div className="p-8 glass-panel rounded-2xl flex flex-col gap-5 group hover:bg-surface-container-high transition-all border-white/5 hover:border-primary/30">
@@ -105,6 +107,9 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Neural Branding Footer (Copyright & Disclaimers) */}
+      <Footer />
 
       {/* Stats Stream Overlay */}
       <div className="absolute bottom-0 left-0 w-full bg-slate-950/40 backdrop-blur-md border-t border-white/5 py-4 overflow-hidden whitespace-nowrap z-30">
