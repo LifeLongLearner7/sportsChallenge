@@ -105,12 +105,18 @@ export const processAllPredictionsForMatch = async (
   const { error: batchUpsertError } = await supabase
     .from("predictions")
     .upsert(
-      scoringResults.map((r) => ({
-        id: r.id,
-        points_won: r.points_won,
-        is_neural_override: r.is_neural_override,
-        is_correct: (r.points_won || 0) > 0, // NEW: Hardened flag
-      })),
+      scoringResults.map((r) => {
+        const original = predictions.find(p => p.id === r.id);
+        return {
+          id: r.id,
+          user_id: r.user_id,
+          match_id: matchId,
+          prediction: original?.prediction || "",
+          points_won: r.points_won,
+          is_neural_override: r.is_neural_override,
+          is_correct: (r.points_won || 0) > 0,
+        };
+      }),
       { onConflict: "id" }
     );
 
