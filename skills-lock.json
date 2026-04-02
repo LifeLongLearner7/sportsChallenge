@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "remotion": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "computedHash": "b3c84d4942732bcd17b47de0a89f9561c460d718b81e0970521077e809d3b990"
+    }
+  }
+}
