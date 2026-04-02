@@ -46,3 +46,7 @@ seed_full_ipl_2026.mjs
 
 # custom: separate remotion project
 /video/
+
+# custom: AI assistant metadata
+/.agents/
+skills-lock.json

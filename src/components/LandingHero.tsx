@@ -65,43 +65,6 @@ export default function LandingHero({ stats }: LandingHeroProps) {
              Thousands of humans are already predicting...
           </div>
 
-          {/* Top Predictor Highlight Card - Only visible on Ultra-Wide screens (xl+) */}
-          <div className="hidden xl:block absolute left-full ml-12 top-1/2 -translate-y-1/2 z-20 pointer-events-none w-64">
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.8, x: 20 }}
-               animate={{ opacity: 1, scale: 1, x: 0, rotate: -6 }}
-               transition={{ delay: 0.8, duration: 1, type: "spring" }}
-               className="glass-panel p-5 rounded-2xl border-white/10 bg-slate-900/40 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col gap-4 border-r border-b border-primary/10"
-            >
-                <div className="flex gap-4 items-center">
-                  <div className="w-12 h-12 bg-secondary/10 border border-secondary/30 flex items-center justify-center relative shadow-[0_0_20px_rgba(255,107,152,0.15)]" style={{ clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' }}>
-                      <div className="absolute inset-0 bg-secondary/20 animate-pulse" style={{ clipPath: 'inherit' }}></div>
-                      <Trophy size={20} className="text-secondary relative z-10" />
-                  </div>
-                  <div className="flex flex-col">
-                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] leading-none mb-1">Top Predictor</span>
-                      <span className="text-base font-headline font-black text-white italic uppercase tracking-tighter drop-shadow-sm truncate max-w-[120px]">
-                        {topPredictor?.screen_name || "STRIKER_X"}
-                      </span>
-                  </div>
-                </div>
-                
-                <div className="bg-black/60 rounded-xl p-3 border border-white/5 shadow-inner">
-                  <div className="flex justify-between items-center mb-2">
-                      <span className="text-[9px] font-black text-primary/80 uppercase tracking-widest leading-none">Current Win Rate</span>
-                      <span className="text-sm font-headline font-black text-white italic">{topPredictor?.accuracy || 0}%</span>
-                  </div>
-                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden p-[1px]">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${topPredictor?.accuracy || 0}%` }}
-                        transition={{ delay: 1.5, duration: 2, ease: "circOut" }}
-                        className="h-full bg-gradient-to-r from-primary/40 to-primary rounded-full shadow-[0_0_15px_rgba(129,236,255,0.5)]"
-                      ></motion.div>
-                  </div>
-                </div>
-            </motion.div>
-          </div>
         </div>
 
 
@@ -145,37 +108,70 @@ export default function LandingHero({ stats }: LandingHeroProps) {
       </div>
 
       {/* Feature Grid - Responsive based on screen width */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4 mt-8">
-        <div className="p-6 glass-panel rounded-xl flex flex-col gap-2 group hover:bg-surface-container-high transition-colors">
-          <Zap className="text-primary" size={32} />
-          <h3 className="font-headline font-bold text-lg uppercase tracking-tight">LIVE INSIGHTS</h3>
-          <p className="text-xs text-on-surface-variant">Real-time data powering your predictions</p>
-        </div>
-        
-        <div className="p-6 glass-panel rounded-xl flex flex-col gap-2 group hover:bg-surface-container-high transition-colors">
-          <div className="relative w-8 h-8 hex-clip border border-secondary/30 shadow-[0_0_15px_rgba(255,107,152,0.4)] overflow-hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-12">
+        {/* Card 1: Mr. Predicto (Primary Rivalry) */}
+        <div className="p-8 glass-panel rounded-2xl flex flex-col gap-4 group hover:bg-surface-container-high transition-all border-white/5 hover:border-secondary/30">
+          <div className="relative w-12 h-12 hex-clip border border-secondary/30 shadow-[0_0_20px_rgba(255,107,152,0.4)] overflow-hidden">
              <NextImage 
                src={MR_PREDICTO_AVATAR.path!} 
                fill 
-               sizes="32px"
+               sizes="48px"
                className="object-cover" 
                alt="Mr. Predicto" 
              />
           </div>
-          <h3 className="font-headline font-bold text-lg uppercase tracking-tight">MR. PREDICTO</h3>
-          <p className="text-xs text-on-surface-variant">Beat our AI rival - an advanced Machine Learning model</p>
+          <div className="flex flex-col gap-1">
+            <h3 className="font-headline font-black text-2xl uppercase tracking-tighter italic text-white flex items-center gap-2">
+              MR. <span className="text-secondary">PREDICTO</span>
+            </h3>
+            <p className="text-sm text-slate-400 font-medium leading-relaxed">
+              Beat our AI rival - an advanced ML model architected for high-accuracy sports foresight.
+            </p>
+          </div>
         </div>
 
-        {/* Top Predictor Card - Replaces floating version on smaller screens (below xl) */}
-        <div className="xl:hidden p-6 glass-panel rounded-xl flex flex-col gap-2 group hover:bg-surface-container-high transition-colors sm:col-span-2 md:col-span-1">
-           <Trophy className="text-secondary" size={32} />
-           <div className="flex flex-col">
-              <h3 className="font-headline font-bold text-lg uppercase tracking-tight">TOP PREDICTOR</h3>
-              <div className="flex items-center gap-2">
-                 <span className="text-white font-black uppercase text-sm italic">{topPredictor?.screen_name || "STRIKER_X"}</span>
-                 <span className="text-secondary font-black text-xs">{topPredictor?.accuracy || 0}% ACC</span>
+        {/* Card 2: Top Predictor (Human Elite) */}
+        <div className="p-8 glass-panel rounded-2xl flex flex-col gap-5 group hover:bg-surface-container-high transition-all border-white/5 hover:border-primary/30">
+           <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex items-center justify-center hex-clip shadow-[0_0_20px_rgba(129,236,255,0.2)]">
+                 <Trophy className="text-primary" size={24} />
+              </div>
+              <h3 className="font-headline font-black text-2xl uppercase tracking-tighter italic text-white/50">
+                 TOP <span className="text-primary/70">PREDICTOR</span>
+              </h3>
+           </div>
+
+           <div className="flex flex-col gap-1">
+              <div className="w-full text-center text-primary font-headline font-black uppercase text-3xl italic tracking-tighter drop-shadow-[0_0_12px_rgba(129,236,255,0.7)] animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                 {topPredictor?.screen_name || "STRIKER_X"}
+              </div>
+              
+              <div className="mt-4 bg-black/60 rounded-xl p-4 border border-white/5 shadow-inner flex flex-col gap-3">
+                 <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] leading-none">Current Win Rate</span>
+                    <span className="text-lg font-headline font-black text-white italic leading-none">{topPredictor?.accuracy || 0}%</span>
+                 </div>
+                 <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden p-[1px] relative">
+                    <motion.div 
+                       initial={{ width: 0 }}
+                       animate={{ width: `${topPredictor?.accuracy || 0}%` }}
+                       transition={{ delay: 0.5, duration: 2, ease: "circOut" }}
+                       className="h-full bg-gradient-to-r from-primary/40 via-primary to-primary-dim rounded-full shadow-[0_0_15px_rgba(129,236,255,0.4)]"
+                    />
+                 </div>
               </div>
            </div>
+        </div>
+
+        {/* Card 3: Live Insights (Foundation) */}
+        <div className="p-8 glass-panel rounded-2xl flex flex-col gap-4 group hover:bg-surface-container-high transition-all border-white/5 sm:col-span-2">
+          <Zap className="text-primary-dim group-hover:text-primary transition-colors" size={32} />
+          <div className="flex flex-col gap-1">
+            <h3 className="font-headline font-bold text-xl uppercase tracking-tight text-slate-300">LIVE INSIGHTS</h3>
+            <p className="text-xs text-on-surface-variant max-w-xl">
+              Streaming real-time telemetry from active arenas. Power your predictions with raw, uncurated data feeds directly from the source.
+            </p>
+          </div>
         </div>
       </div>
     </div>

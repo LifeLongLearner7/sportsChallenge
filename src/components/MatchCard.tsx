@@ -166,7 +166,13 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture }
                     <div className="flex justify-between items-center">
                        <div className="flex items-center gap-2">
                        <div className="relative w-4 h-4 hex-clip shadow-[0_0_8px_rgba(255,107,152,0.3)]">
-                          <Image src={MR_PREDICTO_AVATAR.path!} fill className="object-cover" alt="" />
+                          <Image 
+                            src={MR_PREDICTO_AVATAR.path!} 
+                            fill 
+                            sizes="64px"
+                            className="object-cover" 
+                            alt="Mr. Predicto" 
+                          />
                        </div>
                           <span className="text-[10px] font-black text-secondary tracking-widest uppercase italic">Mr. Predicto's Pick</span>
                        </div>

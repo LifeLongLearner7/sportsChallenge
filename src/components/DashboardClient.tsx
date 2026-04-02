@@ -289,7 +289,13 @@ export default function DashboardClient({
                    <Target size={120} />
                  </div>
                  <div className="w-24 h-24 relative hex-clip border border-secondary/20 shadow-[0_0_30px_rgba(255,107,152,0.4)] overflow-hidden">
-                    <Image src={MR_PREDICTO_AVATAR.path!} fill className="object-cover" alt="Mr. Predicto" />
+                    <Image 
+                      src={MR_PREDICTO_AVATAR.path!} 
+                      fill 
+                      sizes="128px"
+                      className="object-cover" 
+                      alt="Mr. Predicto" 
+                    />
                  </div>
                  <div className="flex flex-col gap-2">
                    <div className="font-headline font-black text-2xl text-white uppercase italic tracking-tighter leading-none">
