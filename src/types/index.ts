@@ -46,6 +46,7 @@ export interface Prediction {
 export interface Profile {
   id: string;
   screen_name?: string;
+  full_name?: string;
   avatar_url?: string;
   avatar_id?: string;
   is_admin?: boolean;
@@ -53,5 +54,6 @@ export interface Profile {
   points?: number;
   matches_predicted: number;
   accuracy: number;
+  onboarding_completed?: boolean;
 }
 

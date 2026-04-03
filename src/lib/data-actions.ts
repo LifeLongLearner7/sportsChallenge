@@ -274,9 +274,23 @@ export async function updateProfile(updates: Partial<Profile>) {
 
   if (!user) throw new Error("Unauthorized");
 
+  // SECURITY FORTIFICATION (V-01): Strict Whitelist
+  // Explicitly pick ONLY user-editable fields.
+  // Prevent modification of 'is_admin', 'points', 'onboarding_completed', etc.
+  const sanitizedUpdates = {
+    screen_name: updates.screen_name,
+    full_name: updates.full_name,
+    avatar_url: updates.avatar_url,
+  };
+
+  // Remove undefined fields to avoid overwriting existing data with NULL
+  Object.keys(sanitizedUpdates).forEach(
+    key => sanitizedUpdates[key as keyof typeof sanitizedUpdates] === undefined && delete sanitizedUpdates[key as keyof typeof sanitizedUpdates]
+  );
+
   const { error } = await supabase
     .from("profiles")
-    .update(updates)
+    .update(sanitizedUpdates)
     .eq("id", user.id);
 
   if (error) throw error;

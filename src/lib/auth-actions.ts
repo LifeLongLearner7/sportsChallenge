@@ -4,6 +4,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -37,6 +38,20 @@ export async function createClient() {
       },
     }
   );
+}
+
+/**
+ * SECURITY PROTOCOL: Administrative Clearance Verification (v5.0.2)
+ * Ensures the current strategist has verified 'is_admin' status.
+ */
+async function requireAdmin() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized: Neural clearance required.");
+  
+  const { data } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+  if (!data?.is_admin) throw new Error("Forbidden: Strategic Level 5 Clearance required.");
+  return user;
 }
 
 /**
@@ -143,13 +158,29 @@ export async function updateOwnPassword(password: string) {
   const supabase = await createClient();
   
   const { data, error } = await supabase.auth.updateUser({
-    password: password
+    password: password,
+    data: { onboarding_completed: true }
   });
 
   if (error) {
     return { error: error.message };
   }
 
+  // Finalize identity in profile registry via Master Override (Service Role)
+  if (data.user) {
+    const adminClient = await createServiceClient();
+    const { error: profileError } = await adminClient
+      .from("profiles")
+      .update({ onboarding_completed: true })
+      .eq("id", data.user.id);
+    
+    if (profileError) {
+      console.error("Neural Firewall: Failed to finalize identity:", profileError.message);
+      return { error: "Identity core synchronization failed. Contact Admin." };
+    }
+  }
+
+  revalidatePath("/profile/settings");
   return { success: true };
 }
 
@@ -159,6 +190,8 @@ export async function updateOwnPassword(password: string) {
  * Targets by email via the Master Auth Registry.
  */
 export async function adminResetUserPassword(email: string, password: string) {
+  // SECURITY FORTIFICATION (V-05): Administrative Gate
+  await requireAdmin();
   const adminClient = await createServiceClient();
   
   // 1. Resolve Target Identity via Master Auth Registry
@@ -185,4 +218,26 @@ export async function adminResetUserPassword(email: string, password: string) {
   }
 
   return { success: true, message: `Encryption signature reset for ${email}.` };
+}
+
+/**
+ * STRATEGIC RECRUITMENT (v4.4)
+ * Dispatches a native Supabase invitation link to a new strategist.
+ * Redirects them directly to their Identity Core upon arrival.
+ */
+export async function inviteStrategist(email: string) {
+  // SECURITY FORTIFICATION (V-05): Administrative Gate
+  await requireAdmin();
+  const adminClient = await createServiceClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  
+  const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${siteUrl}/auth/callback`,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true, message: `Neural invitation dispatched to ${email}.` };
 }

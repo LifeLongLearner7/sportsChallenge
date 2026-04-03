@@ -4,8 +4,13 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // if "next" is in search params, use it as the redirection URL
-  const next = searchParams.get("next") ?? "/dashboard";
+  const token_hash = searchParams.get("token_hash");
+  const type = searchParams.get("type") || "invite";
+  // Default to profile/settings for invitation arrivals if next is missing
+  const next = searchParams.get("next") ?? "/profile/settings";
+
+  // Log all tactical params for debugging
+  console.log("HANDSHAKE RECEIVED [callback]:", Array.from(searchParams.keys()));
 
   if (code) {
     const supabase = await createClient();
@@ -13,8 +18,21 @@ export async function GET(request: Request) {
     if (!error) {
        return NextResponse.redirect(`${origin}${next}`);
     }
+    console.error("HANDSHAKE FAILURE [code_exchange]:", error.message);
   }
 
-  // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth?error=Code_Exchange_Failed`);
+  if (token_hash) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: type as any,
+    });
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`);
+    }
+    console.error("HANDSHAKE FAILURE [token_verify]:", error.message);
+  }
+
+  // return the user to the landing page with auth error instructions
+  return NextResponse.redirect(`${origin}/?error=Code_Exchange_Failed#auth`);
 }

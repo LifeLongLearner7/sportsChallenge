@@ -35,7 +35,11 @@ function AuthForm({ mode, setMode, loading, setLoading }: any) {
           error ? "bg-red-500/10 border-red-500/50 text-red-400" : "bg-primary/10 border-primary/50 text-primary"
         )}>
           {error ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
-          <span className="flex-1">{error || message}</span>
+          <span className="flex-1">
+            {error === "Code_Exchange_Failed" 
+              ? "Tactical Handshake Failed. Your invitation link may have expired or the security environment is mismatched." 
+              : (error || message)}
+          </span>
         </div>
       )}
 

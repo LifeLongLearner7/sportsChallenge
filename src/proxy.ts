@@ -55,8 +55,39 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // ── Layer 2a: Admin route guard — auth + DB is_admin check ───────────────
   const isAdminRoute = ADMIN_ROUTES.some((route) => pathname.startsWith(route));
+  const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
+  const isApiPredictRoute = pathname.startsWith("/api/predict");
+
+  // ── Layer 2a: Admin route guard — auth + DB is_admin check ───────────────
+
+  if ((isProtectedRoute || isApiPredictRoute || isAdminRoute) && user) {
+    // Check if the identity is finalized
+    // Exclude the profile settings and auth routes to prevent circular redirects
+    const isProfileSettings = pathname.startsWith("/profile");
+    const isAuthCallback = pathname.startsWith("/auth/callback");
+
+    if (!isProfileSettings && !isAuthCallback) {
+      // Check user metadata first for instant token-based release
+      const isVerifiedInToken = !!user.user_metadata?.onboarding_completed;
+      
+      if (!isVerifiedInToken) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("onboarding_completed")
+          .eq("id", user.id)
+          .single();
+
+        if (profile && !profile.onboarding_completed) {
+          const redirectUrl = new URL("/profile/settings", request.url);
+          redirectUrl.searchParams.set("onboarding", "required");
+          return NextResponse.redirect(redirectUrl);
+        }
+      }
+    }
+  }
 
   if (isAdminRoute) {
     if (!user) {
@@ -70,7 +101,7 @@ export async function proxy(request: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_admin")
-      .eq("id", user.id)
+      .eq("id", user!.id)
       .single();
 
     if (!profile?.is_admin) {
@@ -81,11 +112,6 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── Layer 2b: Standard protected routes ───────────────────────────────────
-  const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
-    pathname.startsWith(route)
-  );
-  const isApiPredictRoute = pathname.startsWith("/api/predict");
-
   if ((isProtectedRoute || isApiPredictRoute) && !user) {
     const redirectUrl = new URL(AUTH_ROUTE, request.url);
     redirectUrl.searchParams.set("error", "Authentication required.");
@@ -96,6 +122,7 @@ export async function proxy(request: NextRequest) {
   // ── Bonus: Redirect authenticated users away from the landing page ─────────
   const isAuthRoute = pathname === AUTH_ROUTE;
   if (user && isAuthRoute) {
+    // Even authenticated users must complete onboarding before reaching the dashboard
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

@@ -16,7 +16,8 @@ import {
   BarChart3,
   TrendingUp,
   ChevronRight,
-  Trash2
+  Trash2,
+  User
 } from "lucide-react";
 import { systemAutomatedSync } from "@/lib/ai-actions";
 import { adminSignUp } from "@/lib/auth-actions";
@@ -63,6 +64,10 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
   const [resetEmail, setResetEmail] = useState("");
   const [resetPassword, setResetPassword] = useState("");
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // Strategic Recruitment State (v4.4)
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
 
   const addLog = (msg: string, type: 'info' | 'success' | 'err' = 'info') => {
     setSyncLogs(prev => [{ id: Date.now(), msg, type }, ...prev]);
@@ -166,6 +171,30 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
       addLog("UNAUTHORIZED OVERRIDE: Master decryption pulse failed.", "err");
     } finally {
       setIsResettingPassword(false);
+    }
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail) return;
+
+    try {
+      setIsInviting(true);
+      addLog(`Dispatching Neural Invite to: ${inviteEmail}...`, "info");
+      
+      const { inviteStrategist } = await import("@/lib/auth-actions");
+      const result = await inviteStrategist(inviteEmail);
+      
+      if (result.success) {
+        addLog(`INVITATION DISPATCHED: Strategist ${inviteEmail} notified.`, "success");
+        setInviteEmail("");
+      } else {
+        addLog(`INVITATION FAILED: ${result.error}`, "err");
+      }
+    } catch (err) {
+      addLog("INVITATION ERROR: Neural Link broadcast failed.", "err");
+    } finally {
+      setIsInviting(false);
     }
   };
 
@@ -338,6 +367,39 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
                     </div>
                  </div>
               </div>
+
+               {/* Strategic Recruitment Panel (v4.4) */}
+               <div className="glass-panel p-8 rounded-2xl border-primary/10 bg-primary/5 relative overflow-hidden group mb-8">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-2xl transition-all group-hover:bg-primary/10"></div>
+                  <h3 className="text-xs font-black text-primary uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <User size={14} /> Neural Invitation
+                  </h3>
+                  
+                  <form onSubmit={handleInvite} className="flex flex-col gap-4">
+                     <div className="flex flex-col gap-1.5">
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Strategist Identifier (Email)</label>
+                        <input 
+                          required
+                          type="email" 
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          placeholder="RECRUIT_ID@CYBER.NET"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white placeholder:text-slate-600 focus:border-primary/50 outline-none transition-all"
+                        />
+                     </div>
+
+                     <button 
+                       type="submit"
+                       disabled={isInviting || !inviteEmail}
+                       className="w-full py-4 mt-2 rounded-xl bg-primary text-slate-950 font-black uppercase text-xs tracking-widest hover:bg-white active:scale-95 transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(129,236,255,0.2)]"
+                     >
+                        {isInviting ? <RefreshCcw className="animate-spin mx-auto" size={16} /> : "Dispatch Neural Invite"}
+                     </button>
+                  </form>
+                  <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter leading-relaxed mt-4 text-center">
+                    Sends a secure enrollment Link. Strategist will define their own credentials.
+                  </p>
+               </div>
 
               {/* Strategist Enrollment */}
               <div className="glass-panel p-8 rounded-2xl border-white/5 bg-black/40">

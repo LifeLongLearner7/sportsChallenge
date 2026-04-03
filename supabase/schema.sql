@@ -2,17 +2,16 @@
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   screen_name TEXT UNIQUE,
-  full_name TEXT,
   avatar_url TEXT,
   avatar_id TEXT,
-  total_points INTEGER DEFAULT 0,
-  points INTEGER DEFAULT 0, -- Legacy/Secondary points column
+  points INTEGER DEFAULT 0, 
   level INTEGER DEFAULT 1,
   accuracy FLOAT DEFAULT 0, -- Note: Named 'accuracy' in DB, not 'accuracy_rate'
   matches_predicted INTEGER DEFAULT 0,
   is_admin BOOLEAN DEFAULT FALSE,
   is_ai BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  onboarding_completed BOOLEAN DEFAULT FALSE
 );
 
 -- Matches table (Aligned with real DB)
@@ -31,12 +30,11 @@ CREATE TABLE matches (
   ai_prediction TEXT, -- Team name
   ai_confidence FLOAT,
   ai_reasoning TEXT,
-  outfoxed_count INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-  -- updated_at is missing in DB
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Predictions table for user entries (Aligned with real DB)
+-- ── Tactical Registry ───────────────────────────────────────────────────────
 CREATE TABLE predictions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
@@ -106,5 +104,52 @@ CREATE POLICY "Service can update matches" ON matches FOR UPDATE USING (true);
 -- Allow service role to update match predictions (scoring engine)
 CREATE POLICY "Service can update predictions" ON predictions FOR UPDATE USING (true);
 
--- Allow service role to update user profiles (scoring engine)
+-- Allow service role to-- (Placeholder for future tactical expansion)
+
+-- ── SECURITY FORTIFICATION (v5.0): SYSTEM INTEGRITY PULSE ──────────────────
+
+-- 1. Profile Integrity: Protects admin status, points, and onboarding state
+CREATE OR REPLACE FUNCTION protect_profile_system_data()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Revert system-critical columns if not updated by service_role (admin override)
+  IF (current_setting('role') <> 'service_role') THEN
+    NEW.is_admin := OLD.is_admin;
+    NEW.points := OLD.points;
+    NEW.onboarding_completed := OLD.onboarding_completed;
+    NEW.accuracy := OLD.accuracy;
+    NEW.matches_predicted := OLD.matches_predicted;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trigger_protect_profile_system_data
+  BEFORE UPDATE ON profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION protect_profile_system_data();
+
+
+-- 2. Prediction Integrity: Protects scoring truth
+CREATE OR REPLACE FUNCTION protect_prediction_integrity()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Standard strategists can transition 'prediction' but NOT 'points_won' or 'is_correct'
+  IF (current_setting('role') <> 'service_role') THEN
+    NEW.points_won := OLD.points_won;
+    NEW.is_correct := OLD.is_correct;
+    NEW.is_neural_override := OLD.is_neural_override;
+    
+    -- Prevent changing the user_id or match_id of an existing prediction
+    NEW.user_id := OLD.user_id;
+    NEW.match_id := OLD.match_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trigger_protect_prediction_results
+  BEFORE UPDATE OR INSERT ON predictions
+  FOR EACH ROW
+  EXECUTE FUNCTION protect_prediction_integrity();
 CREATE POLICY "Service can update profiles" ON profiles FOR UPDATE USING (true);
