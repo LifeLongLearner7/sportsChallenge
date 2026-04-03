@@ -59,6 +59,11 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
   const [enrollEmail, setEnrollEmail] = useState("");
   const [enrollPassword, setEnrollPassword] = useState("");
 
+  // Reset Override State (v4.3)
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+
   const addLog = (msg: string, type: 'info' | 'success' | 'err' = 'info') => {
     setSyncLogs(prev => [{ id: Date.now(), msg, type }, ...prev]);
   };
@@ -136,6 +141,31 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
       addLog("UNAUTHORIZED OVERRIDE: Enrollment protocol breached.", "err");
     } finally {
       setIsEnrolling(false);
+    }
+  };
+
+  const handleAdminReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail || !resetPassword) return;
+
+    try {
+      setIsResettingPassword(true);
+      addLog(`Initiating Master Override for: ${resetEmail}...`, "info");
+      
+      const { adminResetUserPassword } = await import("@/lib/auth-actions");
+      const result = await adminResetUserPassword(resetEmail, resetPassword);
+      
+      if (result.success) {
+        addLog(`OVERRIDE SUCCESS: Encryption signature reset for ${resetEmail}.`, "success");
+        setResetEmail("");
+        setResetPassword("");
+      } else {
+        addLog(`OVERRIDE FAILED: ${result.error}`, "err");
+      }
+    } catch (err) {
+      addLog("UNAUTHORIZED OVERRIDE: Master decryption pulse failed.", "err");
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -349,6 +379,52 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
                        {isEnrolling ? <RefreshCcw className="animate-spin mx-auto" size={16} /> : "Enroll New Strategist"}
                     </button>
                  </form>
+              </div>
+
+              {/* Admin Password Override (v4.3) */}
+              <div className="glass-panel p-8 rounded-2xl border-red-500/10 bg-red-500/5 relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full -mr-16 -mt-16 blur-2xl transition-all group-hover:bg-red-500/10"></div>
+                 <h3 className="text-xs font-black text-red-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                   <Shield size={14} /> Strategic Override
+                 </h3>
+                 
+                 <form onSubmit={handleAdminReset} className="flex flex-col gap-4">
+                    <div className="space-y-4">
+                       <div className="flex flex-col gap-1.5">
+                          <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Target Strategist Email</label>
+                          <input 
+                            required
+                            type="email" 
+                            value={resetEmail}
+                            onChange={(e) => setResetEmail(e.target.value)}
+                            placeholder="TARGET_ID@CYBER.NET"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white placeholder:text-slate-600 focus:border-red-500/50 outline-none transition-all"
+                          />
+                       </div>
+                       <div className="flex flex-col gap-1.5">
+                          <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">New Access Protocol</label>
+                          <input 
+                            required
+                            type="password" 
+                            value={resetPassword}
+                            onChange={(e) => setResetPassword(e.target.value)}
+                            placeholder="••••••••••••"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white placeholder:text-slate-600 focus:border-red-500/50 outline-none transition-all"
+                          />
+                       </div>
+                    </div>
+
+                    <button 
+                      type="submit"
+                      disabled={isResettingPassword}
+                      className="w-full py-4 mt-2 rounded-xl bg-red-500 text-white font-black uppercase text-xs tracking-widest hover:bg-white hover:text-red-600 active:scale-95 transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                    >
+                       {isResettingPassword ? <RefreshCcw className="animate-spin mx-auto" size={16} /> : "Execute Master Override"}
+                    </button>
+                 </form>
+                 <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter leading-relaxed mt-4 text-center">
+                   Bypasses session check. Operational immediately on next login.
+                 </p>
               </div>
            </div>
 

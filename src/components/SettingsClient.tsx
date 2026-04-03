@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import AvatarGallery from "@/components/AvatarGallery";
-import { Save, User, Fingerprint, ShieldCheck, Cpu, Flag } from "lucide-react";
+import { Save, User, Fingerprint, ShieldCheck, Cpu, Flag, Lock, ShieldAlert, RefreshCcw } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Profile } from "@/types";
 import { updateProfile } from "@/lib/data-actions";
+import { updateOwnPassword } from "@/lib/auth-actions";
 import { AVATARS, FACTIONS } from "@/lib/constants";
 
 function cn(...inputs: ClassValue[]) {
@@ -22,6 +23,13 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
   const [selectedAvatar, setSelectedAvatar] = useState(profile?.avatar_url || "neural_ace");
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // Security State
+  const [newPassword, setNewPassword] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetError, setResetError] = useState("");
+  
   const [activeTab, setActiveTab] = useState<"persona" | "faction">("persona");
 
   const handleSave = async () => {
@@ -40,6 +48,31 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
     }
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      setResetError("Encryption signature must be at least 6 characters.");
+      return;
+    }
+
+    setIsResetting(true);
+    setResetError("");
+    try {
+      const result = await updateOwnPassword(newPassword);
+      if (result.success) {
+        setResetSuccess(true);
+        setNewPassword("");
+        setTimeout(() => setResetSuccess(false), 5000);
+      } else {
+        setResetError(result.error || "Encryption update failed.");
+      }
+    } catch (error) {
+      setResetError("Neural Link error during rotation.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="flex flex-col gap-2">
@@ -49,78 +82,150 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Identity Customization */}
-        <section className="glass-panel p-8 rounded-3xl border-primary/20 flex flex-col gap-8 border-white/5">
-          <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                <Fingerprint size={20} />
-             </div>
-             <h2 className="text-sm font-black text-white uppercase tracking-wider">Identity Core</h2>
-          </div>
+        <div className="flex flex-col gap-8">
+          <section className="glass-panel p-8 rounded-3xl border-primary/20 flex flex-col gap-8 border-white/5 h-fit">
+            <div className="flex items-center gap-3">
+               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <Fingerprint size={20} />
+               </div>
+               <h2 className="text-sm font-black text-white uppercase tracking-wider">Identity Core</h2>
+            </div>
 
-          <div className="flex flex-col gap-4">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Screen Name</label>
-            <div className="relative group">
-              <input 
-                type="text" 
-                value={screenName}
-                onChange={(e) => setScreenName(e.target.value)}
-                className="w-full bg-black/40 border-2 border-white/5 rounded-xl px-4 py-4 text-white font-bold outline-none focus:border-primary/50 transition-all placeholder:text-slate-700 font-sans"
-                placeholder="Enter screen name..."
-              />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-primary opacity-50 group-focus-within:opacity-100 transition-opacity">
-                <User size={18} />
+            <div className="flex flex-col gap-4">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Screen Name</label>
+              <div className="relative group">
+                <input 
+                  type="text" 
+                  value={screenName}
+                  onChange={(e) => setScreenName(e.target.value)}
+                  className="w-full bg-black/40 border-2 border-white/5 rounded-xl px-4 py-4 text-white font-bold outline-none focus:border-primary/50 transition-all placeholder:text-slate-700 font-sans"
+                  placeholder="Enter screen name..."
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-primary opacity-50 group-focus-within:opacity-100 transition-opacity">
+                  <User size={18} />
+                </div>
+              </div>
+              <p className="text-[9px] text-slate-500 font-medium px-1 uppercase tracking-tight">THIS IS YOUR PUBLIC IDENTIFIER ACROSS ALL SCREENS.</p>
+            </div>
+
+            <div className="flex flex-col gap-4 mt-4">
+              <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                     <ShieldCheck size={14} className="text-secondary" />
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Encryption Grade</span>
+                  </div>
+                  <span className="text-[10px] font-black text-secondary uppercase italic">Military (AES-256)</span>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className={cn(
+                    "w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] text-[11px] flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-lg",
+                    isSaving 
+                      ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
+                      : saveSuccess 
+                        ? "bg-green-500/20 text-green-400 border border-green-500/50"
+                        : "bg-primary text-slate-950 font-black shadow-[0_0_20px_rgba(129,236,255,0.4)] hover:bg-white"
+                  )}
+                >
+                  {isSaving ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : saveSuccess ? (
+                    <>IDENTITY UPDATED</>
+                  ) : (
+                    <>
+                      <Save size={18} />
+                      Commit Changes
+                    </>
+                  )}
+                </button>
+
+                {saveSuccess && (
+                  <div className="text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-[10px] font-bold text-green-400/70 uppercase tracking-widest italic">
+                      the changes will update slowly across all screens
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-            <p className="text-[9px] text-slate-500 font-medium px-1 uppercase tracking-tight">THIS IS YOUR PUBLIC IDENTIFIER ACROSS ALL SCREENS.</p>
-          </div>
+          </section>
 
-          <div className="flex flex-col gap-4 mt-4">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                   <ShieldCheck size={14} className="text-secondary" />
-                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Encryption Grade</span>
-                </div>
-                <span className="text-[10px] font-black text-secondary uppercase italic">Military (AES-256)</span>
+          {/* Security Procedures (v4.3) */}
+          <section className="glass-panel p-8 rounded-3xl border-secondary/20 flex flex-col gap-8 border-white/5 h-fit">
+            <div className="flex items-center gap-3">
+               <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
+                  <Lock size={20} />
+               </div>
+               <h2 className="text-sm font-black text-white uppercase tracking-wider">Security Protocol</h2>
             </div>
-            
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={handleSave}
-                disabled={isSaving}
-                className={cn(
-                  "w-full py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[12px] flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-lg",
-                  isSaving 
-                    ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
-                    : saveSuccess 
-                      ? "bg-green-500/20 text-green-400 border border-green-500/50"
-                      : "bg-primary text-white shadow-[0_0_20px_rgba(129,236,255,0.4)] hover:shadow-[0_0_30px_rgba(129,236,255,0.6)] hover:-translate-y-0.5"
-                )}
-              >
-                {isSaving ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : saveSuccess ? (
-                  <>IDENTITY UPDATED</>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    Commit Changes
-                  </>
-                )}
-              </button>
 
-              {saveSuccess && (
-                <div className="text-center animate-in fade-in slide-in-from-top-2 duration-300">
-                  <p className="text-[10px] font-bold text-green-400/70 uppercase tracking-widest italic">
-                    the changes will update slowly across all screens
-                  </p>
+            <form onSubmit={handlePasswordReset} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Secure New Encryption</label>
+                <div className="relative group">
+                  <input 
+                    type="password" 
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-black/40 border-2 border-white/5 rounded-xl px-4 py-4 text-white font-bold outline-none focus:border-secondary/50 transition-all placeholder:text-slate-700 font-sans"
+                    placeholder="••••••••••••"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary opacity-50 group-focus-within:opacity-100 transition-opacity">
+                    <ShieldCheck size={18} />
+                  </div>
+                </div>
+                <p className="text-[9px] text-slate-500 font-medium px-1 uppercase tracking-tight">Minimum 6 characters required for valid identity encryption.</p>
+              </div>
+
+              {resetError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                   <ShieldAlert size={14} className="text-red-500" />
+                   <span className="text-[10px] font-black text-red-500 uppercase">{resetError}</span>
                 </div>
               )}
-            </div>
-          </div>
-        </section>
+
+              <div className="flex flex-col gap-3 mt-2">
+                <button 
+                  type="submit"
+                  disabled={isResetting || !newPassword}
+                  className={cn(
+                    "w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] text-[11px] flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-lg",
+                    isResetting 
+                      ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
+                      : resetSuccess 
+                        ? "bg-green-500/20 text-green-400 border border-green-500/50 shadow-[0_0_20px_#22c55e33]"
+                        : "bg-secondary text-white shadow-[0_0_20px_rgba(255,107,152,0.4)] hover:shadow-[0_0_30px_rgba(255,107,152,0.6)] hover:-translate-y-0.5"
+                  )}
+                >
+                  {isResetting ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : resetSuccess ? (
+                    <>ENCRYPTION ROTATED</>
+                  ) : (
+                    <>
+                      <RefreshCcw size={18} />
+                      Revise Encryption
+                    </>
+                  )}
+                </button>
+
+                {resetSuccess && (
+                  <div className="text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-[10px] font-bold text-green-400/70 uppercase tracking-widest italic">
+                      Your digital signature has been successfully re-encrypted.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </form>
+          </section>
+        </div>
 
         {/* Avatar & Faction Selection */}
-        <section className="glass-panel p-8 rounded-3xl border-secondary/20 flex flex-col gap-8 border-white/5">
+        <section className="glass-panel p-8 rounded-3xl border-secondary/20 flex flex-col gap-8 border-white/5 h-fit">
            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">

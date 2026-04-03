@@ -264,7 +264,7 @@ export default function ArenaClient({
         </div>
 
         {/* Right Column: Tactical Comm-Link (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col glass-panel rounded-2xl border-white/10 bg-black/20 overflow-hidden">
+        <div className="lg:col-span-5 flex flex-col glass-panel rounded-2xl border-white/10 bg-black/20 overflow-hidden h-[600px]">
            
            {/* Comm-Link Header */}
            <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/5">

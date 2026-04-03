@@ -134,3 +134,55 @@ export async function signOut() {
   await supabase.auth.signOut();
   return redirect("/");
 }
+
+/**
+ * SELF-SERVICE PASSWORD ROTATION (v4.3)
+ * Allows the current strategist to update their encryption signature.
+ */
+export async function updateOwnPassword(password: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase.auth.updateUser({
+    password: password
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * ADMINISTRATIVE MASTER OVERRIDE (v4.3)
+ * Uses the service-role protocol to reset any strategist's encryption.
+ * Targets by email via the Master Auth Registry.
+ */
+export async function adminResetUserPassword(email: string, password: string) {
+  const adminClient = await createServiceClient();
+  
+  // 1. Resolve Target Identity via Master Auth Registry
+  const { data: { users }, error: listError } = await adminClient.auth.admin.listUsers();
+  
+  if (listError) {
+    return { error: "Registry Connection Severed: " + listError.message };
+  }
+
+  const targetUser = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+  if (!targetUser) {
+    return { error: "Tactical ID not found in Master Auth Registry." };
+  }
+
+  // 2. Execute Master Override
+  const { data, error } = await adminClient.auth.admin.updateUserById(
+    targetUser.id,
+    { password: password }
+  );
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true, message: `Encryption signature reset for ${email}.` };
+}
