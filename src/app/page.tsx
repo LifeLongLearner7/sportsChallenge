@@ -34,7 +34,7 @@ export default async function Home() {
             sizes="80px" 
           />
         </div>
-        <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] font-headline uppercase leading-none">
+        <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-primary drop-shadow-[0_0_15px_rgba(0,229,255,0.4)] font-headline uppercase leading-none">
           CYBER-SPORTS
         </h1>
       </header>
