@@ -23,8 +23,8 @@ export async function generateMatchPrediction(match: Match) {
   }
 
   const prompt = `
-    You are 'SPORTS-AI-CORE', a high-fidelity sports analysis AI designed for the IPL 2026 season.
-    Task: Predict the winning likelihood and provide strategic reasoning for the following T20 fixture.
+    You are 'SPORTS-AI-CORE', a high-fidelity sports analysis AI designed for the IPL 2026 season.Expert at analyses based on team players, pitch and immediate performance. 
+    Task: Predict the winning likelihood and provide strategic reasoning for the following T20 fixture. 
     
     Match Information:
     Teams: ${match.team_a} vs ${match.team_b}

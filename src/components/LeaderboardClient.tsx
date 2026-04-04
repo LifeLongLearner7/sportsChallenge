@@ -35,8 +35,12 @@ export default function LeaderboardClient({
     return ALL_IDENTITIES.find(a => id && a.id === id) || ALL_IDENTITIES[0];
   };
 
+  // Calculate current user's rank from the initial profiles list
+  const userIndex = initialProfiles.findIndex(p => p.id === currentUserProfile?.id);
+  const displayRank = userIndex !== -1 ? (userIndex + 1).toString().padStart(2, '0') : "N/A";
+
   return (
-    <main className="min-h-screen pt-10 pb-20 bg-background relative overflow-hidden">
+    <main className="min-h-screen pt-32 pb-20 bg-background relative overflow-hidden">
       
       {/* Background Glows */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[140px] pointer-events-none"></div>
@@ -51,7 +55,7 @@ export default function LeaderboardClient({
         </div>
 
         {/* Top 3 Podium */}
-        <div className="grid md:grid-cols-3 gap-8 items-end max-w-5xl mx-auto w-full">
+        <div className="grid md:grid-cols-3 gap-8 items-end max-w-5xl mx-auto w-full pt-10">
           {/* Silver - Rank 2 */}
           {silver && (
             <div className="order-2 md:order-1 flex flex-col items-center gap-6 group">
@@ -83,6 +87,15 @@ export default function LeaderboardClient({
                 )}>02</div>
               </div>
               <div className="text-center">
+                 {(() => {
+                    const tier = calculateTier(2, initialProfiles.length);
+                    const tierColor = getTierColor(tier);
+                    return (
+                      <div className={cn("text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 border rounded-full mb-3 inline-block", tierColor)}>
+                        {tier}
+                      </div>
+                    );
+                 })()}
                 <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{silver.screen_name || "STRATEGIST_" + silver.id.slice(0,4)}</div>
                 <div className="text-primary font-bold">{(silver.points || 0).toLocaleString()} PTS</div>
               </div>
@@ -124,6 +137,15 @@ export default function LeaderboardClient({
                 <Trophy className="absolute -top-10 left-1/2 -translate-x-1/2 text-tertiary drop-shadow-[0_0_15px_rgba(255,231,146,0.8)]" size={40} />
               </div>
               <div className="text-center">
+                 {(() => {
+                    const tier = calculateTier(1, initialProfiles.length);
+                    const tierColor = getTierColor(tier);
+                    return (
+                      <div className={cn("text-[9px] font-black uppercase tracking-[0.25em] px-3 py-1 border rounded-full mb-4 inline-block shadow-lg", tierColor)}>
+                        {tier}
+                      </div>
+                    );
+                 })()}
                 <div className="font-black text-white uppercase tracking-tight text-2xl mb-1">{gold.screen_name || "STRATEGIST_" + gold.id.slice(0,4)}</div>
                 <div className="text-tertiary font-bold text-lg">{(gold.points || 0).toLocaleString()} PTS</div>
               </div>
@@ -161,6 +183,15 @@ export default function LeaderboardClient({
                 )}>03</div>
               </div>
               <div className="text-center">
+                 {(() => {
+                    const tier = calculateTier(3, initialProfiles.length);
+                    const tierColor = getTierColor(tier);
+                    return (
+                      <div className={cn("text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 border rounded-full mb-3 inline-block", tierColor)}>
+                        {tier}
+                      </div>
+                    );
+                 })()}
                 <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{bronze.screen_name || "STRATEGIST_" + bronze.id.slice(0,4)}</div>
                 <div className="text-primary font-bold">{(bronze.points || 0).toLocaleString()} PTS</div>
               </div>
@@ -265,7 +296,7 @@ export default function LeaderboardClient({
           <div className="glass-panel p-8 rounded-3xl flex flex-col gap-3 border-white/5 hover:border-white/10 transition-colors shadow-xl">
             <div className="text-[9px] font-black text-slate-500 tracking-[0.3em] uppercase">Tactical Rank</div>
             <div className="text-4xl font-headline font-black text-tertiary italic tracking-tighter">
-              {currentUserProfile ? `#${(currentUserProfile as any).rank}` : "N/A"}
+               #{displayRank}
             </div>
           </div>
         </div>

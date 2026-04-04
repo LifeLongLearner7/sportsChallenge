@@ -113,7 +113,7 @@ export default function ArenaClient({
   const humanLead = initialStats.avgHumanAccuracy - initialStats.avgAiAccuracy;
 
   return (
-    <main className="min-h-screen bg-background pt-10 pb-12 px-6">
+    <main className="min-h-screen bg-background pt-32 pb-12 px-6">
       <div className="max-w-screen-2xl mx-auto grid lg:grid-cols-12 gap-8">
         
         {/* Left Column: Analytics & Records (7 cols) */}
