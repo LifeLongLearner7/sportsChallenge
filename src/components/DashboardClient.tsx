@@ -13,7 +13,6 @@ import {
   Activity,
 } from "lucide-react";
 import MatchCard from "./MatchCard";
-import Navbar from "@/components/Navbar";
 import { submitPrediction } from "@/lib/data-actions";
 import { AVATARS, MR_PREDICTO_AVATAR } from "@/lib/constants";
 import Image from "next/image";
@@ -47,6 +46,7 @@ export default function DashboardClient({
   totalUsers,
   rank
 }: DashboardClientProps) {
+  const [savingMatchId, setSavingMatchId] = useState<string | null>(null);
   const [predictions, setPredictions] = useState<Record<string, string>>(
     initialPredictions.reduce((acc, p) => ({ ...acc, [p.match_id]: p.prediction }), {})
   );
@@ -55,10 +55,20 @@ export default function DashboardClient({
 
   const handlePredict = async (matchId: string, winner: string) => {
     try {
+      setSavingMatchId(matchId);
       setPredictions((prev) => ({ ...prev, [matchId]: winner }));
       await submitPrediction(matchId, winner);
     } catch (error) {
       console.error("Prediction failed:", error);
+      // Revert optimism on failure
+      setPredictions((prev) => {
+        const next = { ...prev };
+        delete next[matchId];
+        return next;
+      });
+      alert("⚠️ DATA SYNC FAILURE: Unable to preserve team selection. Please check your connectivity and try again.");
+    } finally {
+      setSavingMatchId(null);
     }
   };
 
@@ -95,8 +105,7 @@ export default function DashboardClient({
   const humanLead = globalStats.avgHumanAccuracy - globalStats.avgAiAccuracy;
 
   return (
-    <div className="min-h-screen bg-[#020205] text-slate-200 p-4 md:p-8 font-sans selection:bg-primary/30 pt-28">
-      <Navbar isAdmin={profile?.is_admin} profile={profile} />
+    <div className="min-h-screen bg-[#020205] text-slate-200 p-4 md:p-8 font-sans selection:bg-primary/30 pt-10">
       <div className="max-w-screen-2xl mx-auto space-y-10">
         
         {/* HUD Header */}
@@ -218,6 +227,7 @@ export default function DashboardClient({
                           match={match} 
                           onPredict={handlePredict}
                           userPrediction={predictions[match.id]}
+                          isSaving={savingMatchId === match.id}
                         />
                       ))
                     ) : (
@@ -247,6 +257,7 @@ export default function DashboardClient({
                           onPredict={handlePredict}
                           userPrediction={predictions[match.id]}
                           isFuture={true}
+                          isSaving={savingMatchId === match.id}
                         />
                       ))}
                     </div>

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import NextImage from "next/image";
-import { Zap, Mail, Users, Info, Trophy } from "lucide-react";
-import { MR_PREDICTO_AVATAR } from "@/lib/constants";
+import Image from "next/image";
+import { Zap, Users, Info, Bot, Trophy, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface LandingHeroProps {
@@ -11,102 +10,123 @@ interface LandingHeroProps {
     humanScore: string;
     aiScore: string;
     globalAccuracy: string;
-    topPredictor: {
-      screen_name: string;
-      accuracy: number;
-    };
   };
 }
 
 export default function LandingHero({ stats }: LandingHeroProps) {
   const [showInviteInfo, setShowInviteInfo] = useState(false);
-  const { topPredictor } = stats;
 
   return (
-    <div className="flex flex-col gap-8 order-2 lg:order-1 relative">
-
-      <div className="flex flex-col gap-4">
-        <span className="inline-flex items-center gap-2 bg-secondary/20 border border-secondary/30 text-secondary px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase w-fit">
+    <div className="flex flex-col gap-10 relative">
+      
+      {/* Proposition Pulse */}
+      <div className="flex flex-col gap-5">
+        <motion.span 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="inline-flex items-center gap-2 bg-secondary/15 border border-secondary/30 text-secondary px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.4em] uppercase w-fit"
+        >
           <span className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_#ff6b98] animate-pulse"></span>
           Live: Human vs AI Epoch 1
-        </span>
-        <h1 className="font-headline text-6xl md:text-8xl font-black leading-[0.9] tracking-tighter uppercase italic">
-          Join the <br/><span className="text-primary italic">Synthetic</span> <br/>
-          <span className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Arena</span>
-        </h1>
-        <p className="max-w-md text-on-surface-variant text-lg leading-relaxed">
+        </motion.span>
+        
+        <motion.h1 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="font-headline text-6xl md:text-8xl font-black leading-[0.85] tracking-tighter uppercase italic"
+        >
+          Join the <br/>
+          <span className="text-primary italic">Synthetic</span> <br/>
+          <span className="text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">Arena</span>
+        </motion.h1>
+        
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="max-w-md text-slate-400 text-lg md:text-xl leading-relaxed font-medium"
+        >
           Experience the high-velocity fusion of T20 energy and futuristic AI precision. Predict outcomes, master the meta, and claim your status.
-        </p>
+        </motion.p>
       </div>
 
-      <div className="flex flex-col gap-6">
-        {/* Action Belt: Join Button & Evidence */}
-        <div className="flex flex-col gap-4 relative">
-          <div className="flex flex-wrap gap-4 items-center">
-            <button 
+      {/* Action Pulse - Matches Expected Screenshot */}
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap gap-5 items-center">
+            <motion.button 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowInviteInfo(!showInviteInfo)}
-              className="px-8 py-4 bg-gradient-to-br from-primary to-primary-dim text-slate-950 font-headline font-extrabold uppercase tracking-widest rounded-md scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(129,236,255,0.4)] hover:shadow-[0_0_30px_rgba(129,236,255,0.6)] cursor-pointer"
+              className="px-10 py-5 bg-gradient-to-br from-primary to-primary-dim text-slate-950 font-headline font-black uppercase tracking-widest text-sm rounded shadow-[0_0_30px_rgba(129,236,255,0.3)] hover:shadow-[0_0_40px_rgba(129,236,255,0.5)] transition-all"
             >
               Join the Arena
-            </button>
-            <div className="flex -space-x-3 items-center ml-4 relative">
+            </motion.button>
+            
+            <div className="flex -space-x-4 items-center">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="w-10 h-10 bg-surface-container-highest rounded-full border-2 border-surface hex-clip overflow-hidden">
-                  <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">U{i}</div>
+                <div key={i} className="w-12 h-12 bg-slate-900 rounded-full border-2 border-[#050505] flex items-center justify-center text-primary text-[11px] font-black shadow-2xl">
+                   U{i}
                 </div>
               ))}
-              <div className="w-10 h-10 bg-surface-container-highest rounded-full border-2 border-surface flex items-center justify-center text-[10px] font-bold text-primary bg-primary/20">
+              <div className="w-12 h-12 bg-slate-800 rounded-full border-2 border-[#050505] flex items-center justify-center text-[10px] font-black text-primary bg-primary/20 z-10 shadow-2xl">
                 12K+
               </div>
             </div>
           </div>
-          
-          <div className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] px-1 overflow-hidden whitespace-nowrap opacity-70">
-             Thousands of humans are already predicting...
-          </div>
 
+          <AnimatePresence>
+            {showInviteInfo && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: "auto" }}
+                exit={{ opacity: 0, y: 10, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="p-6 glass-panel rounded-2xl border-white/5 bg-white/5 shadow-2xl flex flex-col gap-4 relative group">
+                  <div className="absolute top-4 right-4 text-white/5 group-hover:text-primary/20 transition-colors">
+                    <Info size={48} />
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Users className="text-primary" size={20} />
+                    <h3 className="font-headline font-black text-sm uppercase tracking-[0.2em] italic text-primary">
+                      STRATEGIC ENROLLMENT PROTOCOL
+                    </h3>
+                  </div>
+                  
+                  <p className="text-xs font-bold text-slate-300 leading-relaxed uppercase tracking-wider">
+                    Access to the Synthetic Arena is restricted to verified strategists. To request clearance:
+                  </p>
+                  
+                  <ul className="flex flex-col gap-3">
+                    <li className="flex items-start gap-3 group/item">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 group-hover/item:scale-125 transition-transform" />
+                      <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                        Connect with an existing member for an Invitation Link.
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-3 group/item">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 group-hover/item:scale-125 transition-transform" />
+                      <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                        Email Command: <span className="text-primary cursor-pointer hover:underline">sportsaichallenge@gmail.com</span>
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-
-
-
-        <AnimatePresence>
-
-          {showInviteInfo && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: 'auto' }}
-              exit={{ opacity: 0, y: -20, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-4 shadow-2xl relative group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Info size={40} className="text-primary" />
-                </div>
-                <div className="flex items-center gap-3 text-primary">
-                  <Users size={18} />
-                  <h4 className="text-xs font-black uppercase tracking-widest italic">Strategic Enrollment Protocol</h4>
-                </div>
-                <p className="text-sm text-slate-300 leading-relaxed font-medium">
-                  Access to the Synthetic Arena is restricted to verified strategists. To request clearance:
-                </p>
-                <ul className="space-y-3">
-                  <li className="flex items-center gap-3 text-xs text-slate-400 font-bold">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    Connect with an existing member for an Invitation Link.
-                  </li>
-                  <li className="flex items-center gap-3 text-xs text-slate-400 font-bold">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span className="flex items-center gap-2">
-                       Email Command: <span className="text-primary cursor-pointer hover:underline">sportsaichallenge@gmail.com</span>
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        
+        <div className="flex flex-col gap-3">
+           <div className="h-px w-full bg-gradient-to-r from-white/10 to-transparent"></div>
+           <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] px-1">Global Connectivity Confirmed • Thousands signaling...</span>
+        </div>
       </div>
-
     </div>
   );
 }

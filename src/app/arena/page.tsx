@@ -1,25 +1,37 @@
-import { getUserProfile, getCompletedMatches, getArenaMessages, getGlobalStats } from "@/lib/data-actions";
+import { Suspense } from "react";
+import { getCompletedMatches, getArenaMessages, getUserProfile, getArenaStats } from "@/lib/data-actions";
 import ArenaClient from "@/components/ArenaClient";
-import { redirect } from "next/navigation";
+import Navbar from "@/components/Navbar";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
 
 export default async function ArenaPage() {
-  const [profile, completedMatches, initialMessages, globalStats] = await Promise.all([
-    getUserProfile(),
+  // FAST PATH: Shell + Navbar + Profile
+  const profile = await getUserProfile();
+
+  return (
+    <>
+      <Navbar isAdmin={profile?.is_admin} profile={profile} />
+      <Suspense fallback={<DashboardSkeleton />}>
+        <ArenaDataWrapper profile={profile} />
+      </Suspense>
+    </>
+  );
+}
+
+async function ArenaDataWrapper({ profile }: { profile: any }) {
+  // STREAMING PATH: Tactical data
+  const [matches, messages, stats] = await Promise.all([
     getCompletedMatches(),
     getArenaMessages(),
-    getGlobalStats()
+    getArenaStats(),
   ]);
-
-  if (!profile) {
-    redirect("/auth");
-  }
 
   return (
     <ArenaClient 
+      initialMatches={matches}
+      initialMessages={messages}
       profile={profile}
-      completedMatches={completedMatches}
-      initialMessages={initialMessages}
-      globalStats={globalStats}
+      initialStats={stats}
     />
   );
 }

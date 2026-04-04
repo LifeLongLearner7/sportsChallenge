@@ -68,7 +68,7 @@ export const getMatches = unstable_cache(
     }
   },
   ["all-matches"],
-  { revalidate: 3600, tags: ["all-matches"] }
+  { revalidate: 1800, tags: ["all-matches"] }
 );
 
 /**
@@ -172,7 +172,7 @@ export const getPlatformStats = unstable_cache(
     }
   },
   ["platform-stats"],
-  { revalidate: 3600, tags: ["platform-stats"] }
+  { revalidate: 1800, tags: ["platform-stats"] }
 );
 
 /** Backwards-compatible: Leaderboard page expects this shape */
@@ -203,7 +203,7 @@ export const getTotalStrategists = unstable_cache(
     return count || 0;
   },
   ["total-strategists"],
-  { revalidate: 28800, tags: ["total-strategists"] }
+  { revalidate: 1800, tags: ["total-strategists"] }
 );
 
 export async function getUserPredictions() {
@@ -245,7 +245,7 @@ export const getUserDetailedHistory = unstable_cache(
     }
   },
   ["user-detailed-history"], 
-  { revalidate: 60, tags: ["user-detailed-history"] }
+  { revalidate: 1800, tags: ["user-detailed-history"] }
 );
 
 export async function submitPrediction(matchId: string, predictedWinner: string) {
@@ -331,7 +331,7 @@ export const getLandingStats = unstable_cache(
     };
   },
   ["landing-stats"],
-  { revalidate: 3600 }
+  { revalidate: 1800 }
 );
 
 
@@ -352,7 +352,7 @@ export const getTopPredictor = unstable_cache(
     return topUser || { screen_name: "STRIKER_X", accuracy: 89.4 };
   },
   ["top-predictor-solo"],
-  { revalidate: 600 }
+  { revalidate: 1800 }
 );
 
 
@@ -393,7 +393,7 @@ export const getUserRank = unstable_cache(
     return (count || 0) + 1;
   },
   ["user-rank"],
-  { revalidate: 28800 } // Cache user rank for 8 hours
+  { revalidate: 1800 } 
 );
 
 // Arena Data Actions
@@ -409,7 +409,7 @@ export const getCompletedMatches = unstable_cache(
     return data as Match[];
   },
   ["completed-matches"],
-  { revalidate: 300 }
+  { revalidate: 1800 }
 );
 
 export async function getArenaStats() {
@@ -454,7 +454,7 @@ export const getArenaMessages = unstable_cache(
     return data;
   },
   ["arena-messages"],
-  { revalidate: 60 } // Real-time client subscription handles fresh messages seamlessly
+  { revalidate: 1800 } // Real-time client subscription handles fresh messages seamlessly
 );
 
 export async function sendArenaMessage(content: string) {

@@ -136,13 +136,20 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- Standard strategists can transition 'prediction' but NOT 'points_won' or 'is_correct'
   IF (current_setting('role') <> 'service_role') THEN
-    NEW.points_won := OLD.points_won;
-    NEW.is_correct := OLD.is_correct;
-    NEW.is_neural_override := OLD.is_neural_override;
-    
-    -- Prevent changing the user_id or match_id of an existing prediction
-    NEW.user_id := OLD.user_id;
-    NEW.match_id := OLD.match_id;
+    -- Initialize or protect system-critical columns based on operation type
+    IF (TG_OP = 'INSERT') THEN
+      NEW.points_won := 0;
+      NEW.is_correct := FALSE;
+      NEW.is_neural_override := FALSE;
+    ELSIF (TG_OP = 'UPDATE') THEN
+      NEW.points_won := OLD.points_won;
+      NEW.is_correct := OLD.is_correct;
+      NEW.is_neural_override := OLD.is_neural_override;
+      
+      -- Prevent changing the user_id or match_id of an existing prediction
+      NEW.user_id := OLD.user_id;
+      NEW.match_id := OLD.match_id;
+    END IF;
   END IF;
   RETURN NEW;
 END;

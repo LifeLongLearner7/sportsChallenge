@@ -1,6 +1,5 @@
 "use client";
 
-import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import { Trophy, TrendingUp } from "lucide-react";
 import { Profile } from "@/types";
@@ -14,24 +13,22 @@ import {
 } from "@/lib/strategist-logic";
 
 interface LeaderboardClientProps {
-  rankers: Profile[];
+  initialProfiles: Profile[];
   currentUserProfile: Profile | null;
-  globalStats: {
+  stats: {
     activeNodes: string;
     meanAccuracy: string;
     dominance: string;
   };
-  totalUsers: number;
 }
 
 export default function LeaderboardClient({ 
-  rankers, 
+  initialProfiles, 
   currentUserProfile, 
-  globalStats, 
-  totalUsers 
+  stats 
 }: LeaderboardClientProps) {
-  const [gold, silver, bronze] = rankers.slice(0, 3);
-  const others = rankers.slice(3);
+  const [gold, silver, bronze] = initialProfiles.slice(0, 3);
+  const others = initialProfiles.slice(3);
 
   const getAvatar = (id: string | null | undefined, isAi?: boolean) => {
     if (isAi || id === 'mr_predicto') return MR_PREDICTO_AVATAR;
@@ -39,8 +36,7 @@ export default function LeaderboardClient({
   };
 
   return (
-    <main className="min-h-screen pt-32 pb-20 bg-background relative overflow-hidden">
-      <Navbar isAdmin={currentUserProfile?.is_admin} profile={currentUserProfile} />
+    <main className="min-h-screen pt-10 pb-20 bg-background relative overflow-hidden">
       
       {/* Background Glows */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[140px] pointer-events-none"></div>
@@ -88,9 +84,6 @@ export default function LeaderboardClient({
               </div>
               <div className="text-center">
                 <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{silver.screen_name || "STRATEGIST_" + silver.id.slice(0,4)}</div>
-                <div className={cn("text-[10px] font-black uppercase mb-2", getTierColor(calculateTier(2, totalUsers)))}>
-                  {calculateTier(2, totalUsers)}
-                </div>
                 <div className="text-primary font-bold">{(silver.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
@@ -132,9 +125,6 @@ export default function LeaderboardClient({
               </div>
               <div className="text-center">
                 <div className="font-black text-white uppercase tracking-tight text-2xl mb-1">{gold.screen_name || "STRATEGIST_" + gold.id.slice(0,4)}</div>
-                <div className={cn("text-[10px] font-black uppercase mb-3", getTierColor(calculateTier(1, totalUsers)))}>
-                  {calculateTier(1, totalUsers)}
-                </div>
                 <div className="text-tertiary font-bold text-lg">{(gold.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
@@ -172,9 +162,6 @@ export default function LeaderboardClient({
               </div>
               <div className="text-center">
                 <div className="font-black text-white uppercase tracking-tight text-lg mb-1">{bronze.screen_name || "STRATEGIST_" + bronze.id.slice(0,4)}</div>
-                <div className={cn("text-[10px] font-black uppercase mb-2", getTierColor(calculateTier(3, totalUsers)))}>
-                  {calculateTier(3, totalUsers)}
-                </div>
                 <div className="text-primary font-bold">{(bronze.points || 0).toLocaleString()} PTS</div>
               </div>
             </div>
@@ -228,9 +215,6 @@ export default function LeaderboardClient({
                         </span>
                       )}
                     </div>
-                    <div className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", getTierColor(calculateTier(idx + 4, totalUsers)))}>
-                      {calculateTier(idx + 4, totalUsers)}
-                    </div>
                   </div>
                 </div>
                 
@@ -267,9 +251,9 @@ export default function LeaderboardClient({
         {/* Global Stats Footer */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {[
-            { label: "Active Nodes", value: globalStats.activeNodes, color: "text-white" },
-            { label: "Mean Accuracy", value: globalStats.meanAccuracy, color: "text-primary" },
-            { label: "Human Dominance", value: globalStats.dominance, color: "text-secondary" },
+            { label: "Active Nodes", value: stats.activeNodes, color: "text-white" },
+            { label: "Mean Accuracy", value: stats.meanAccuracy, color: "text-primary" },
+            { label: "Human Dominance", value: stats.dominance, color: "text-secondary" },
           ].map((stat) => (
             <div key={stat.label} className="glass-panel p-8 rounded-3xl flex flex-col gap-3 border-white/5 hover:border-white/10 transition-colors shadow-xl">
               <div className="text-[9px] font-black text-slate-500 tracking-[0.3em] uppercase">{stat.label}</div>

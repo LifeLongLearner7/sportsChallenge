@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Match, Profile } from "@/types";
 import { AVATARS, ALL_IDENTITIES, MR_PREDICTO_AVATAR, ALPHA_HUMAN_AVATAR } from "@/lib/constants";
-import Navbar from "@/components/Navbar";
 import { cn } from "@/lib/utils";
 import { 
   Sword, 
@@ -22,9 +21,9 @@ import { createClient } from "@/lib/supabase";
 
 interface ArenaClientProps {
   profile: Profile | null;
-  completedMatches: Match[];
+  initialMatches: Match[];
   initialMessages: any[];
-  globalStats: {
+  initialStats: {
     userCount: number;
     avgHumanAccuracy: number;
     avgAiAccuracy: number;
@@ -33,9 +32,9 @@ interface ArenaClientProps {
 
 export default function ArenaClient({ 
   profile, 
-  completedMatches, 
+  initialMatches, 
   initialMessages, 
-  globalStats 
+  initialStats 
 }: ArenaClientProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [newMessage, setNewMessage] = useState("");
@@ -64,7 +63,6 @@ export default function ArenaClient({
                .single();
              
              if (data) {
-               // Deduplicate to avoid issues with server revalidation
                setMessages(prev => {
                   if (prev.find(m => m.id === data.id)) return prev;
                   return [...prev, data];
@@ -112,12 +110,10 @@ export default function ArenaClient({
     }
   };
 
-  const humanLead = globalStats.avgHumanAccuracy - globalStats.avgAiAccuracy;
+  const humanLead = initialStats.avgHumanAccuracy - initialStats.avgAiAccuracy;
 
   return (
-    <main className="min-h-screen bg-background pt-24 pb-12 px-6">
-      <Navbar isAdmin={profile?.is_admin} profile={profile} />
-      
+    <main className="min-h-screen bg-background pt-10 pb-12 px-6">
       <div className="max-w-screen-2xl mx-auto grid lg:grid-cols-12 gap-8">
         
         {/* Left Column: Analytics & Records (7 cols) */}
@@ -140,67 +136,64 @@ export default function ArenaClient({
 
           {/* Conflict Gauge */}
           <div className="glass-panel p-10 rounded-2xl relative group border-white/5 bg-gradient-to-br from-secondary/5 to-primary/5 mb-10 overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 blur-3xl -mr-32 -mt-32"></div>
-            <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center">
-               <div className="flex flex-col gap-6">
-                  <div>
-                    <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-2">Neural Synchronization</h3>
-                     <div className="text-3xl font-headline font-black text-white italic uppercase leading-none">
-                        {humanLead >= 0 ? "Human" : "Mr. Predicto"} <br/>
-                        Superiority: <span className={cn(humanLead >= 0 ? "text-primary" : "text-secondary")}>+{Math.abs(humanLead).toFixed(1)}%</span>
-                     </div>
-                  </div>
-                  
-                  <div className="flex flex-col gap-4">
-                     <div className="space-y-2">
-                        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest leading-none">
-                           <span className="text-slate-400">Strategist Consensus</span>
-                           <span className="text-white">{globalStats.avgHumanAccuracy}%</span>
-                        </div>
-                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                           <div className="h-full bg-primary shadow-[0_0_12px_#81ecff]" style={{ width: `${globalStats.avgHumanAccuracy}%` }}></div>
-                        </div>
-                     </div>
-                     <div className="space-y-2">
-                        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest leading-none">
-                           <span className="text-secondary/70">Mr. Predicto</span>
-                           <span className="text-secondary">{globalStats.avgAiAccuracy}%</span>
-                        </div>
-                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                           <div className="h-full bg-secondary shadow-[0_0_12px_#ff6b98]" style={{ width: `${globalStats.avgAiAccuracy}%` }}></div>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-               
-                <div className="flex flex-col gap-6 items-center justify-center p-10 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
-                   <div className="relative w-48 h-48 flex items-center justify-center">
-                     {/* Neural Resonance Rings */}
-                     <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0", humanLead >= 0 ? "border-primary/30" : "border-secondary/30")}></div>
-                     <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0 [animation-delay:1s]", humanLead >= 0 ? "border-primary/20" : "border-secondary/20")}></div>
-                     <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0 [animation-delay:2s]", humanLead >= 0 ? "border-primary/10" : "border-secondary/10")}></div>
-
-                     <div className="relative z-10 w-40 h-40 flex items-center justify-center">
-                        {humanLead >= 0 ? (
-                          <div className="relative w-36 h-36 hex-clip border border-primary/30 shadow-[0_0_40px_#81ecff] group/avatar">
-                             <Image src={ALPHA_HUMAN_AVATAR.path!} fill sizes="144px" className="object-cover" alt="Alpha Strategist" />
-                             {/* Scanning Line HUD */}
-                             <div className="absolute inset-x-0 h-0.5 bg-primary/40 shadow-[0_0_12px_#81ecff] animate-scan-line z-20"></div>
-                          </div>
-                        ) : (
-                          <div className="relative w-36 h-36 hex-clip border border-secondary/30 shadow-[0_0_40px_#ff6b98] group/avatar">
-                             <Image src={MR_PREDICTO_AVATAR.path!} fill sizes="144px" className="object-cover" alt="Mr. Predicto" />
-                             {/* Scanning Line HUD */}
-                             <div className="absolute inset-x-0 h-0.5 bg-secondary/40 shadow-[0_0_12px_#ff6b98] animate-scan-line z-20"></div>
-                          </div>
-                        )}
-                     </div>
+             <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 blur-3xl -mr-32 -mt-32"></div>
+             <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center">
+                <div className="flex flex-col gap-6">
+                   <div>
+                     <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-2">Neural Synchronization</h3>
+                      <div className="text-3xl font-headline font-black text-white italic uppercase leading-none">
+                         {humanLead >= 0 ? "Human" : "Mr. Predicto"} <br/>
+                         Superiority: <span className={cn(humanLead >= 0 ? "text-primary" : "text-secondary")}>+{Math.abs(humanLead).toFixed(1)}%</span>
+                      </div>
                    </div>
-                  <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest text-center max-w-[150px]">
-                     Current platform evolution favouring {humanLead >= 0 ? "Human Strategists" : "Mr. Predicto"}
-                  </div>
-               </div>
-            </div>
+                   
+                   <div className="flex flex-col gap-4">
+                      <div className="space-y-2">
+                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest leading-none">
+                            <span className="text-slate-400">Strategist Consensus</span>
+                            <span className="text-white">{initialStats.avgHumanAccuracy}%</span>
+                         </div>
+                         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary shadow-[0_0_12px_#81ecff]" style={{ width: `${initialStats.avgHumanAccuracy}%` }}></div>
+                         </div>
+                      </div>
+                      <div className="space-y-2">
+                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest leading-none">
+                            <span className="text-secondary/70">Mr. Predicto</span>
+                            <span className="text-secondary">{initialStats.avgAiAccuracy}%</span>
+                         </div>
+                         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-secondary shadow-[0_0_12px_#ff6b98]" style={{ width: `${initialStats.avgAiAccuracy}%` }}></div>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+                
+                 <div className="flex flex-col gap-6 items-center justify-center p-10 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
+                    <div className="relative w-48 h-48 flex items-center justify-center">
+                      <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0", humanLead >= 0 ? "border-primary/30" : "border-secondary/30")}></div>
+                      <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0 [animation-delay:1s]", humanLead >= 0 ? "border-primary/20" : "border-secondary/20")}></div>
+                      <div className={cn("absolute inset-0 rounded-full border-2 animate-neural-pulse opacity-0 [animation-delay:2s]", humanLead >= 0 ? "border-primary/10" : "border-secondary/10")}></div>
+
+                      <div className="relative z-10 w-40 h-40 flex items-center justify-center">
+                         {humanLead >= 0 ? (
+                           <div className="relative w-36 h-36 hex-clip border border-primary/30 shadow-[0_0_40px_#81ecff] group/avatar">
+                              <Image src={ALPHA_HUMAN_AVATAR.path!} fill sizes="144px" className="object-cover" alt="Alpha Strategist" />
+                              <div className="absolute inset-x-0 h-0.5 bg-primary/40 shadow-[0_0_12px_#81ecff] animate-scan-line z-20"></div>
+                           </div>
+                         ) : (
+                           <div className="relative w-36 h-36 hex-clip border border-secondary/30 shadow-[0_0_40px_#ff6b98] group/avatar">
+                              <Image src={MR_PREDICTO_AVATAR.path!} fill sizes="144px" className="object-cover" alt="Mr. Predicto" />
+                              <div className="absolute inset-x-0 h-0.5 bg-secondary/40 shadow-[0_0_12px_#ff6b98] animate-scan-line z-20"></div>
+                           </div>
+                         )}
+                      </div>
+                    </div>
+                   <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest text-center max-w-[150px]">
+                      Current platform evolution favouring {humanLead >= 0 ? "Human Strategists" : "Mr. Predicto"}
+                   </div>
+                </div>
+             </div>
           </div>
 
           {/* Combat Logs (Completed Matches) */}
@@ -209,8 +202,8 @@ export default function ArenaClient({
                <Sword size={14} className="text-white" /> Combat Logs
              </h3>
              <div className="grid gap-4">
-                {completedMatches.length > 0 ? (
-                  completedMatches.map(match => {
+                {initialMatches.length > 0 ? (
+                  initialMatches.map(match => {
                     const aiWinner = match.ai_prediction === match.winner;
                     return (
                       <div key={match.id} className="glass-panel p-5 rounded-xl border-white/5 flex items-center justify-between group hover:border-white/10 transition-all">
@@ -232,7 +225,7 @@ export default function ArenaClient({
 
                                  <div className="flex items-center gap-1.5">
                                     <div className="w-2 h-2 rounded-full bg-primary/50"></div>
-                                    <span className="text-[8px] font-black text-slate-400 uppercase">Con: {globalStats.avgHumanAccuracy}% Human Avg</span>
+                                    <span className="text-[8px] font-black text-slate-400 uppercase">Con: {initialStats.avgHumanAccuracy}% Human Avg</span>
                                  </div>
                               </div>
                            </div>
@@ -256,7 +249,7 @@ export default function ArenaClient({
                   })
                 ) : (
                   <div className="p-12 text-center glass-panel border-dashed border-white/10 rounded-2xl opacity-50">
-                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">No Concluded Records Found in Global logs</p>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">No Concluded Records Found</p>
                   </div>
                 )}
              </div>
@@ -339,14 +332,13 @@ export default function ArenaClient({
                               {msg.content}
                            </div>
                            
-                           {/* Moderation Controls */}
                            {(profile?.is_admin || isOwn) && (
                              <button 
                                onClick={() => handleDeleteMessage(msg.id)}
                                className={cn(
                                  "absolute -top-2 opacity-0 group-hover/msg:opacity-100 transition-all p-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-xl",
                                  isOwn ? "-left-2" : "-right-2"
-                               )}
+                                )}
                              >
                                 <Trash2 size={10} />
                              </button>
@@ -356,12 +348,12 @@ export default function ArenaClient({
                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                     </div>
-                  )
+                   );
                 })
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center opacity-30">
                    <MessageSquare size={32} className="text-slate-500" />
-                   <p className="text-[10px] font-black uppercase tracking-widest max-w-[150px]">Transmission buffer empty. Initiate tactical sync.</p>
+                   <p className="text-[10px] font-black uppercase tracking-widest max-w-[150px]">Transmission buffer empty.</p>
                 </div>
               )}
            </div>
@@ -381,24 +373,19 @@ export default function ArenaClient({
                     <button 
                       type="submit"
                       disabled={isSending || !newMessage.trim() || !profile}
-                      className="absolute right-3 p-2 bg-primary text-slate-950 rounded-lg hover:bg-primary/80 transition-all disabled:opacity-50 disabled:grayscale"
+                      className="absolute right-3 p-2 bg-primary text-slate-950 rounded-lg hover:bg-primary/80 transition-all"
                     >
                        <Send size={16} />
                     </button>
                  </div>
                  <div className="flex justify-between items-center px-1">
                     <p className="text-[7px] font-black text-slate-600 uppercase tracking-widest">
-                       Secure Terminal Sync: {profile?.screen_name || "Guest"}
-                    </p>
-                    <p suppressHydrationWarning className="text-[7px] font-black text-slate-600 uppercase tracking-widest">
-                       Purge Cycle: {new Date().toLocaleDateString()}
+                       Secure Terminal: {profile?.screen_name || "Guest"}
                     </p>
                  </div>
               </form>
            </div>
-
         </div>
-
       </div>
     </main>
   );

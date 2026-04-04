@@ -12,9 +12,10 @@ interface MatchCardProps {
   onPredict: (matchId: string, winner: string) => void;
   userPrediction?: string;
   isFuture?: boolean;
+  isSaving?: boolean;
 }
 
-export default function MatchCard({ match, onPredict, userPrediction, isFuture }: MatchCardProps) {
+export default function MatchCard({ match, onPredict, userPrediction, isFuture, isSaving }: MatchCardProps) {
   const [formattedDate, setFormattedDate] = useState<string>("");
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isLocked, setIsLocked] = useState(false);
@@ -53,7 +54,7 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture }
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden transition-all hover:border-primary/30 group">
-      <div className="p-6 flex flex-col gap-6">
+      <div className={cn("p-6 flex flex-col gap-6", isSaving && "opacity-50 pointer-events-none")}>
         {/* Match Header */}
         <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
           <div className="flex items-center gap-2">
@@ -133,16 +134,18 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture }
               ) : (
                 <div className="flex gap-2">
                   <button 
+                    disabled={isSaving}
                     onClick={() => onPredict(match.id, match.team_a)}
-                    className="flex-1 py-3 bg-surface-container-high border border-primary/20 hover:border-primary text-xs font-bold uppercase tracking-widest rounded-md transition-all active:scale-95"
+                    className="flex-1 py-3 bg-surface-container-high border border-primary/20 hover:border-primary text-xs font-bold uppercase tracking-widest rounded-md transition-all active:scale-95 disabled:opacity-50"
                   >
-                    {match.team_a}
+                    {isSaving ? "SAVING..." : match.team_a}
                   </button>
                   <button 
+                    disabled={isSaving}
                     onClick={() => onPredict(match.id, match.team_b)}
-                    className="flex-1 py-3 bg-surface-container-high border border-primary/20 hover:border-primary text-xs font-bold uppercase tracking-widest rounded-md transition-all active:scale-95"
+                    className="flex-1 py-3 bg-surface-container-high border border-primary/20 hover:border-primary text-xs font-bold uppercase tracking-widest rounded-md transition-all active:scale-95 disabled:opacity-50"
                   >
-                    {match.team_b}
+                    {isSaving ? "SAVING..." : match.team_b}
                   </button>
                 </div>
               )}

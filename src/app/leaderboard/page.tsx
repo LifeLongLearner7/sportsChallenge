@@ -1,28 +1,35 @@
-import { getLeaderboard, getUserProfile, getLeaderboardStats, getUserRank, getTotalStrategists } from "@/lib/data-actions";
+import { Suspense } from "react";
+import { getLeaderboard, getLeaderboardStats, getUserProfile } from "@/lib/data-actions";
 import LeaderboardClient from "@/components/LeaderboardClient";
+import Navbar from "@/components/Navbar";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
 
 export default async function LeaderboardPage() {
-  const [rankers, profile, stats, totalUsers] = await Promise.all([
-    getLeaderboard(20),
-    getUserProfile(),
+  // FAST PATH: Shell + Navbar + Profile
+  const profile = await getUserProfile();
+
+  return (
+    <>
+      <Navbar isAdmin={profile?.is_admin} profile={profile} />
+      <Suspense fallback={<DashboardSkeleton />}>
+        <LeaderboardDataWrapper profile={profile} />
+      </Suspense>
+    </>
+  );
+}
+
+async function LeaderboardDataWrapper({ profile }: { profile: any }) {
+  // STREAMING PATH: Rankings + Stats
+  const [leaderboard, stats] = await Promise.all([
+    getLeaderboard(),
     getLeaderboardStats(),
-    getTotalStrategists(),
   ]);
-
-  // Parallelize the rank fetch IF we have a profile
-  const rankPromise = profile ? getUserRank(profile.id) : Promise.resolve(0);
-  const rank = await rankPromise;
-
-  const profileWithRank = profile 
-    ? { ...profile, rank } 
-    : null;
 
   return (
     <LeaderboardClient 
-      rankers={rankers} 
-      currentUserProfile={profileWithRank} 
-      globalStats={stats} 
-      totalUsers={totalUsers}
+      initialProfiles={leaderboard} 
+      stats={stats}
+      currentUserProfile={profile} 
     />
   );
 }
