@@ -116,64 +116,57 @@ export async function systemStatusSync() {
  */
 export async function systemResultSync() {
   const supabase = await createServiceClient();
+  
+  console.log(`Strategic Pulse: Initiating Match Result Sync at ${new Date().toISOString()}...`);
+
+  // Identification Pulse: Look for matches that started in the past and are not yet completed
   const now = new Date();
+  
+  // Extend window by 2 hours to ensure late-night IST finishes are captured by the UTC cron pulse
+  const lookupTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); 
 
-  console.log(`Strategic Pulse: Initiating Match Result Sync at ${now.toISOString()}...`);
-
-  // 1. Resolve Passed Matches via External API
   const { data: pastMatches } = await supabase
     .from("matches")
     .select("*")
-    .lt("match_time", now.toISOString())
+    .lt("match_time", lookupTime.toISOString())
     .neq("status", "completed");
 
   if (pastMatches && pastMatches.length > 0) {
     console.log(`Strategic Pulse: Processing ${pastMatches.length} pending matches.`);
-
-    
     const externalResults = await fetchRecentResults();
+    let resolvedCount = 0;
     
     for (const match of pastMatches) {
        // A. Try to find the match in external results using aliases
        const externalMatch = externalResults.find(em => {
           const teamNames = em.teams.map(t => t.toLowerCase());
-          const matchA = match.team_a.toLowerCase();
-          const matchB = match.team_b.toLowerCase();
-          
-          const aliasesA = [matchA, ...(TEAM_MAPPINGS[match.team_a] || [])].map(a => a.toLowerCase());
-          const aliasesB = [matchB, ...(TEAM_MAPPINGS[match.team_b] || [])].map(b => b.toLowerCase());
+          const aliasesA = [match.team_a, ...(TEAM_MAPPINGS[match.team_a] || [])].map(a => a.toLowerCase());
+          const aliasesB = [match.team_b, ...(TEAM_MAPPINGS[match.team_b] || [])].map(b => b.toLowerCase());
 
           const hasA = teamNames.some(t => aliasesA.some(a => t.includes(a) || a.includes(t)));
           const hasB = teamNames.some(t => aliasesB.some(b => t.includes(b) || b.includes(t)));
-          
           return hasA && hasB;
        });
 
        let actualWinnerKey: "team_a" | "team_b" | null = null;
-
        if (externalMatch) {
          actualWinnerKey = determineWinner(externalMatch, match.team_a, match.team_b);
+       } else {
+         console.warn(`Pulse Warning: External data not found for ${match.team_a} vs ${match.team_b}`);
        }
 
         if (actualWinnerKey) {
           const actualWinnerName = actualWinnerKey === "team_a" ? match.team_a : match.team_b;
-          console.log(`Strategic Pulse: Match ${match.id} resolved as ${actualWinnerName}. Awarding points...`);
-          
-          // CRITICAL: Process points FIRST. If this fails, match status remains pending for retry.
           await processAllPredictionsForMatch(match.id, actualWinnerName, match.ai_prediction);
-
-          // Update status only AFTER scoring success
-          await supabase
-            .from("matches")
-            .update({ winner: actualWinnerName, status: "completed" })
-            .eq("id", match.id);
-
-          console.log(`Strategic Pulse: Match ${match.id} finalized successfully.`);
+          await supabase.from("matches").update({ winner: actualWinnerName, status: "completed" }).eq("id", match.id);
+          resolvedCount++;
         }
     }
+    
+    await logSystemActivity('result', 'success', `Match result sync: identified ${pastMatches.length} pending, resolved ${resolvedCount}.`);
+  } else {
+    await logSystemActivity('result', 'success', `Match result sync: No pending matches found in resolution window.`);
   }
-
-  await logSystemActivity('result', 'success', `Match result sync completed at ${now.toLocaleTimeString()}`);
 
   revalidatePath("/dashboard");
   revalidatePath("/leaderboard");

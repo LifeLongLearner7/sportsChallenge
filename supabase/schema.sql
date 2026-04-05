@@ -30,6 +30,7 @@ CREATE TABLE matches (
   ai_prediction TEXT, -- Team name
   ai_confidence FLOAT,
   ai_reasoning TEXT,
+  outfoxed_count INTEGER DEFAULT 0, -- Track strategists who beat the AI
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -50,7 +51,7 @@ CREATE TABLE predictions (
 -- Global stats for Human vs AI comparison (Optimized for scale)
 CREATE TABLE global_stats (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sport TEXT DEFAULT 'cricket',
+  sport TEXT DEFAULT 'cricket' UNIQUE, -- Unique constraint required for tactical upserts
   human_accuracy FLOAT DEFAULT 0,
   ai_accuracy FLOAT DEFAULT 0,
   human_points_total BIGINT DEFAULT 0,
@@ -113,7 +114,7 @@ CREATE OR REPLACE FUNCTION protect_profile_system_data()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Revert system-critical columns if not updated by service_role (admin override)
-  IF (current_setting('role') <> 'service_role') THEN
+  IF (auth.role() <> 'service_role' AND current_setting('role', true) <> 'service_role') THEN
     NEW.is_admin := OLD.is_admin;
     NEW.points := OLD.points;
     NEW.onboarding_completed := OLD.onboarding_completed;
@@ -135,7 +136,7 @@ CREATE OR REPLACE FUNCTION protect_prediction_integrity()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Standard strategists can transition 'prediction' but NOT 'points_won' or 'is_correct'
-  IF (current_setting('role') <> 'service_role') THEN
+  IF (auth.role() <> 'service_role' AND current_setting('role', true) <> 'service_role') THEN
     -- Initialize or protect system-critical columns based on operation type
     IF (TG_OP = 'INSERT') THEN
       NEW.points_won := 0;
@@ -160,3 +161,30 @@ CREATE TRIGGER trigger_protect_prediction_results
   FOR EACH ROW
   EXECUTE FUNCTION protect_prediction_integrity();
 CREATE POLICY "Service can update profiles" ON profiles FOR UPDATE USING (true);
+
+-- 3. Automatic Timestamps: Automated updated_at management
+CREATE OR REPLACE FUNCTION handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach to Matches
+CREATE TRIGGER trigger_update_matches_timestamp
+  BEFORE UPDATE ON matches
+  FOR EACH ROW
+  EXECUTE FUNCTION handle_updated_at();
+
+-- Attach to Profiles
+CREATE TRIGGER trigger_update_profiles_timestamp
+  BEFORE UPDATE ON profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION handle_updated_at();
+
+-- Attach to Predictions
+CREATE TRIGGER trigger_update_predictions_timestamp
+  BEFORE UPDATE ON predictions
+  FOR EACH ROW
+  EXECUTE FUNCTION handle_updated_at();

@@ -342,26 +342,34 @@ export async function systemGlobalAudit() {
       .eq("id", userId);
   }));
 
-  // 5. Force re-sync of Human/AI global totals
-  const { data: allProfiles } = await supabase.from("profiles").select("accuracy, points").eq("is_ai", false);
-  if (allProfiles) {
-    const humanPointsTotal = allProfiles.reduce((acc, p) => acc + (p.points || 0), 0);
-    const avgAccuracy = allProfiles.reduce((acc, p) => acc + (p.accuracy || 0), 0) / (allProfiles.length || 1);
+  // 6. Match Metric Reconstruction: Aggregating Outfoxed Counts
+  console.log("Strategic Audit: Reconstructing match metrics (Outfoxed Counts)...");
+  await Promise.all(matches.map(async (match) => {
+    const aiWinner = (match.ai_prediction || "").toLowerCase();
+    const actualWinner = (match.winner || "").toLowerCase();
     
-    // Get AI's official score from its profile (System UUID)
-    const { data: aiProfile } = await supabase.from("profiles").select("points").eq("id", "00000000-0000-0000-0000-000000000001").single();
+    // An AI is outfoxed if its prediction was WRONG and the actual result is known
+    if (aiWinner !== actualWinner) {
+      const matchPredictions = correctedPredictions.filter(p => 
+        p?.match_id === match.id && 
+        p?.is_neural_override === true &&
+        p.user_id !== "00000000-0000-0000-0000-000000000001" // Exclude the AI itself
+      );
+      
+      await supabase
+        .from("matches")
+        .update({ outfoxed_count: matchPredictions.length })
+        .eq("id", match.id);
+    } else {
+      // If AI was right, outfoxed count is technically 0
+      await supabase
+        .from("matches")
+        .update({ outfoxed_count: 0 })
+        .eq("id", match.id);
+    }
+  }));
 
-    await supabase.from("global_stats").upsert({
-      sport: 'cricket',
-      human_accuracy: Math.round(avgAccuracy * 10) / 10,
-      human_points_total: humanPointsTotal,
-      ai_points_total: aiProfile?.points || 0,
-      total_matches: matches.length,
-      last_updated: new Date().toISOString()
-    }, { onConflict: 'sport' });
-  }
-
-  await logSystemActivity('audit', 'success', `Global Audit completed for ${userIds.length} strategists.`);
+  await logSystemActivity('audit', 'success', `Global Audit completed for ${userIds.length} strategists and ${matches.length} fixtures.`);
   return { success: true, auditedUsers: userIds.length };
 }
 
