@@ -42,6 +42,7 @@ next-env.d.ts
 # scratch scripts and research tools
 /research_vault
 /tmp
+/scripts/*.mjs
 seed_full_ipl_2026.mjs
 
 # custom: separate remotion project

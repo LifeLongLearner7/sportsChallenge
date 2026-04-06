@@ -9,8 +9,52 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-import { fetchRecentResults, determineWinner, TEAM_MAPPINGS } from "./api-service";
+import { fetchRecentResults, determineWinner, fetchMatchInfo, TEAM_MAPPINGS } from "./api-service";
 import { processAllPredictionsForMatch, logSystemActivity } from "./scoring";
+
+/**
+ * NEURAL PRIMARY: Identifies the winner of a match using OpenAI's research pulse.
+ * This is the high-fidelity failover for when traditional sports APIs rotate data.
+ */
+export async function verifyWinnerWithNeuralResearch(match: Match) {
+  if (!process.env.OPENAI_API_KEY) return null;
+
+  const prompt = `
+    You are 'SPORTS-RESULT-CORE'. Identify the official winning team for this past match.
+    
+    Match Information:
+    Tournament: ${match.tournament || "IPL 2026"}
+    Teams: ${match.team_a} vs ${match.team_b}
+    Date: ${new Date(match.match_time).toLocaleDateString()}
+    Venue: ${match.venue || "TBD"}
+    
+    Task: Resolve the final fixture outcome.
+    Return ONLY a raw JSON object with these fields:
+    - winner_name: The exact name of the winning team (must be ${match.team_a} or ${match.team_b}). Return "Draw" if the match was a tie/no result.
+    - status_string: A short summary (e.g., "LSG won by 33 runs").
+    - confidence: Integer (80-100).
+    
+    Example: {"winner_name": "LSG", "status_string": "Lucknow Super Giants won by 33 runs", "confidence": 100}
+  `;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.3, // Low temperature for factual accuracy
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    if (result.confidence >= 95 && result.winner_name) {
+       return result;
+    }
+    return null;
+  } catch (err) {
+    console.error("NEURAL RESEARCH FAILURE:", err);
+    return null;
+  }
+}
 
 
 /**
@@ -113,17 +157,15 @@ export async function systemStatusSync() {
 /**
  * THE RESULT PULSE (02:00 AM IST)
  * Synchronizes real match results and processes player scoring.
+ * Strategic Pivot: Prioritizes Surgical ID Mapping (v6.6) over firehose searching.
  */
 export async function systemResultSync() {
   const supabase = await createServiceClient();
   
-  console.log(`Strategic Pulse: Initiating Match Result Sync at ${new Date().toISOString()}...`);
+  console.log(`Strategic Pulse: Initiating High-Fidelity Match Result Sync (IPL 2026 Series ID) at ${new Date().toISOString()}...`);
 
-  // Identification Pulse: Look for matches that started in the past and are not yet completed
-  const now = new Date();
-  
-  // Extend window by 2 hours to ensure late-night IST finishes are captured by the UTC cron pulse
-  const lookupTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); 
+  // 1. Identification: Look for matches that started in the past and are not completed
+  const lookupTime = new Date(Date.now() + 2 * 60 * 60 * 1000); 
 
   const { data: pastMatches } = await supabase
     .from("matches")
@@ -131,46 +173,94 @@ export async function systemResultSync() {
     .lt("match_time", lookupTime.toISOString())
     .neq("status", "completed");
 
-  if (pastMatches && pastMatches.length > 0) {
-    console.log(`Strategic Pulse: Processing ${pastMatches.length} pending matches.`);
-    const externalResults = await fetchRecentResults();
-    let resolvedCount = 0;
-    
-    for (const match of pastMatches) {
-       // A. Try to find the match in external results using aliases
-       const externalMatch = externalResults.find(em => {
-          const teamNames = em.teams.map(t => t.toLowerCase());
-          const aliasesA = [match.team_a, ...(TEAM_MAPPINGS[match.team_a] || [])].map(a => a.toLowerCase());
-          const aliasesB = [match.team_b, ...(TEAM_MAPPINGS[match.team_b] || [])].map(b => b.toLowerCase());
-
-          const hasA = teamNames.some(t => aliasesA.some(a => t.includes(a) || a.includes(t)));
-          const hasB = teamNames.some(t => aliasesB.some(b => t.includes(b) || b.includes(t)));
-          return hasA && hasB;
-       });
-
-       let actualWinnerKey: "team_a" | "team_b" | null = null;
-       if (externalMatch) {
-         actualWinnerKey = determineWinner(externalMatch, match.team_a, match.team_b);
-       } else {
-         console.warn(`Pulse Warning: External data not found for ${match.team_a} vs ${match.team_b}`);
-       }
-
-        if (actualWinnerKey) {
-          const actualWinnerName = actualWinnerKey === "team_a" ? match.team_a : match.team_b;
-          await processAllPredictionsForMatch(match.id, actualWinnerName, match.ai_prediction);
-          await supabase.from("matches").update({ winner: actualWinnerName, status: "completed" }).eq("id", match.id);
-          resolvedCount++;
-        }
-    }
-    
-    await logSystemActivity('result', 'success', `Match result sync: identified ${pastMatches.length} pending, resolved ${resolvedCount}.`);
-  } else {
+  if (!pastMatches || pastMatches.length === 0) {
     await logSystemActivity('result', 'success', `Match result sync: No pending matches found in resolution window.`);
+    return { success: true, mode: "no_pending" };
+  }
+
+  console.log(`Strategic Pulse: Processing ${pastMatches.length} pending matches (Surgical ID Mode).`);
+  let resolvedCount = 0;
+  let externalResults: any[] | null = null; // Lazy load fallback
+
+  for (const match of pastMatches) {
+    let actualWinnerName: string | null = null;
+    let resolutionSource: "MAPPING_ID" | "NEURAL" | "API" | null = null;
+
+    // 🛡️ SUB-PULSE A: SURGICAL ID MAPPING (Tournament-Centric)
+    const { data: linkage } = await supabase
+      .from("external_fixtures")
+      .select("external_id")
+      .eq("match_id", match.id)
+      .single();
+
+    if (linkage?.external_id) {
+      console.log(`Surgical Scan: Match ${match.id} linked to External ID ${linkage.external_id}. Probing Match Info...`);
+      const extMatch = await fetchMatchInfo(linkage.external_id);
+      
+      if (extMatch) {
+         const winnerKey = determineWinner(extMatch, match.team_a, match.team_b);
+         if (winnerKey) {
+            actualWinnerName = winnerKey === "team_a" ? match.team_a : match.team_b;
+            resolutionSource = "MAPPING_ID";
+         }
+      }
+    }
+
+    // 🛡️ SUB-PULSE B: NEURAL EMERGENCY (OpenAI Search) - Only if mapping fails
+    if (!actualWinnerName) {
+      try {
+        const neuralResult = await verifyWinnerWithNeuralResearch(match);
+        if (neuralResult && neuralResult.winner_name && neuralResult.winner_name !== "Draw") {
+          actualWinnerName = neuralResult.winner_name;
+          resolutionSource = "NEURAL";
+        }
+      } catch (e) {
+        process.stdout.write(`Neural Pulse Bypass for ${match.id}\r`);
+      }
+    }
+
+    // 🛡️ SUB-PULSE C: API DEEP FALLBACK (Original firehose logic)
+    if (!actualWinnerName) {
+      try {
+        if (!externalResults) externalResults = await fetchRecentResults();
+        
+        const fallbackMatch = externalResults.find(em => {
+            const teamNames = (em.teams || []).map((t: string) => t.toLowerCase());
+            const aliasesA = [match.team_a, ...(TEAM_MAPPINGS[match.team_a] || [])].map(a => a.toLowerCase());
+            const aliasesB = [match.team_b, ...(TEAM_MAPPINGS[match.team_b] || [])].map(b => b.toLowerCase());
+            return teamNames.some((t: string) => aliasesA.some(a => t.includes(a) || a.includes(t))) && 
+                   teamNames.some((t: string) => aliasesB.some(b => t.includes(b) || b.includes(t)));
+        });
+
+        if (fallbackMatch) {
+           const winnerKey = determineWinner(fallbackMatch, match.team_a, match.team_b);
+           if (winnerKey) {
+              actualWinnerName = winnerKey === "team_a" ? match.team_a : match.team_b;
+              resolutionSource = "API";
+           }
+        }
+      } catch (e) {
+        console.error("API Backup Failure:", e);
+      }
+    }
+
+    // 🛡️ FINALIZATION
+    if (actualWinnerName) {
+      await processAllPredictionsForMatch(match.id, actualWinnerName, match.ai_prediction);
+      await supabase.from("matches").update({ winner: actualWinnerName, status: "completed" }).eq("id", match.id);
+      
+      const successMsg = `Match resolved via ${resolutionSource}: ${match.team_a} vs ${match.team_b} (${actualWinnerName} won).`;
+      await logSystemActivity('result', 'success', successMsg);
+      resolvedCount++;
+    } else {
+      const failMsg = `Sync Failure: No verified winner found (MAPPING/AI/API exhausted) for ${match.team_a} vs ${match.team_b}.`;
+      await logSystemActivity('result', 'failure', failMsg, { matchId: match.id });
+    }
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/leaderboard");
-  return { success: true, mode: "results_synced" };
+  return { success: true, count: resolvedCount };
 }
 
 /**
