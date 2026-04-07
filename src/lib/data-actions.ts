@@ -613,7 +613,43 @@ export async function triggerManualSync() {
 export async function triggerGlobalAudit() {
   await requireAdmin();
   const { systemGlobalAudit } = await import("./scoring");
-  return await systemGlobalAudit();
+  revalidatePath("/leaderboard");
+}
+
+export async function resolveMatchAbandoned(matchId: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  
+  // 1. Get Match Data
+  const { data: match, error: fetchError } = await supabase
+    .from("matches")
+    .select("ai_prediction, team_a, team_b")
+    .eq("id", matchId)
+    .single();
+
+  if (fetchError || !match) throw new Error("Match not found");
+
+  // 2. Update Match to Abandoned Status
+  const { error: updateError } = await supabase
+    .from("matches")
+    .update({ 
+      winner: "abandoned", 
+      status: "completed"
+    })
+    .eq("id", matchId);
+
+  if (updateError) throw updateError;
+
+  // 3. Process Scoring with 'abandoned' winner (Grants 50 points to all)
+  const { processAllPredictionsForMatch } = await import("./scoring");
+  await processAllPredictionsForMatch(matchId, "abandoned", match.ai_prediction);
+
+  revalidatePath("/dashboard");
+  revalidatePath("/arena");
+  revalidatePath("/leaderboard");
+  revalidatePath("/admin/matches");
+  
+  return { success: true };
 }
 
 export async function triggerTournamentRegistrySync() {

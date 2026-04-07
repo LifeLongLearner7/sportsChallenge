@@ -8,7 +8,8 @@ import {
   triggerCachePurge,
   triggerTournamentRegistrySync,
   runCollisionAudit,
-  linkMatchSurgically
+  linkMatchSurgically,
+  resolveMatchAbandoned
 } from "@/lib/data-actions";
 import { Match, Profile } from "@/types";
 import { useRouter } from "next/navigation";
@@ -25,7 +26,8 @@ import {
   Unlink,
   ExternalLink,
   ShieldCheck,
-  Search
+  Search,
+  CloudRain
 } from "lucide-react";
 
 /**
@@ -37,6 +39,7 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
   const [syncing, setSyncing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'info' | 'error' | 'success' } | null>(null);
   const [showAuditConfirm, setShowAuditConfirm] = useState(false);
+  const [abandonConfirmId, setAbandonConfirmId] = useState<string | null>(null);
   const [conflictReport, setConflictReport] = useState<{ unlinked: any[], conflicts: any[], mapped: number } | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -118,14 +121,29 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
     });
   };
 
+  const handleMatchAbandoned = async (matchId: string) => {
+    setAbandonConfirmId(null);
+    setSyncing(true);
+    setStatusMessage({ text: "Initiating Abandoned Resolution Protocol...", type: "info" });
+    try {
+      await resolveMatchAbandoned(matchId);
+      await fetchMatches();
+      setStatusMessage({ text: "Match Resolved: 50-Point Compensation Pulse Dispatched.", type: "success" });
+    } catch (error) {
+      setStatusMessage({ text: "Resolution Failure: Protocol aborted.", type: "error" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleGlobalAudit = async () => {
     setShowAuditConfirm(false);
     setSyncing(true);
     setStatusMessage({ text: "Initiating Deep Sector Audit...", type: "info" });
     try {
-      const result = await triggerGlobalAudit();
+      const result = await triggerGlobalAudit() as any;
       await fetchMatches();
-      setStatusMessage({ text: `Audit Complete: ${result.auditedUsers} strategists re-calibrated.`, type: "success" });
+      setStatusMessage({ text: `Audit Complete: Re-calibrating strategist pools.`, type: "success" });
     } catch (error) {
       setStatusMessage({ text: "System Audit Failure: Data reconstruction aborted.", type: "error" });
     } finally {
@@ -160,7 +178,9 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
   };
 
   const upcomingMatches = matches.filter(m => m.status !== "completed");
-  const completedMatches = matches.filter(m => m.status === "completed");
+  const completedMatches = matches
+    .filter(m => m.status === "completed")
+    .sort((a, b) => new Date(b.match_time).getTime() - new Date(a.match_time).getTime());
 
   return (
     <div className="min-h-screen bg-[#050505] text-white p-8 font-sans selection:bg-purple-500/30">
@@ -354,22 +374,57 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-3 mt-4">
-                      <button 
-                        onClick={() => handleUpdateWinner(match.id, "team_a")}
-                        disabled={isPending || syncing}
-                        className="py-3 px-4 rounded-xl border border-white/5 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/20 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        Set {match.team_a} Winner
-                      </button>
-                      <button 
-                        onClick={() => handleUpdateWinner(match.id, "team_b")}
-                        disabled={isPending || syncing}
-                        className="py-3 px-4 rounded-xl border border-white/5 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/20 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        Set {match.team_b} Winner
-                      </button>
-                    </div>
+                    <>
+                      <div className="grid grid-cols-2 gap-3 mt-4">
+                        <button 
+                          onClick={() => handleUpdateWinner(match.id, "team_a")}
+                          disabled={isPending || syncing}
+                          className="py-3 px-4 rounded-xl border border-white/5 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/20 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          Set {match.team_a} Winner
+                        </button>
+                        <button 
+                          onClick={() => handleUpdateWinner(match.id, "team_b")}
+                          disabled={isPending || syncing}
+                          className="py-3 px-4 rounded-xl border border-white/5 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/20 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          Set {match.team_b} Winner
+                        </button>
+                      </div>
+
+                      {abandonConfirmId === match.id ? (
+                        <div className="mt-3 p-4 rounded-xl border border-blue-500/20 bg-blue-500/10 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <p className="text-[10px] font-bold text-blue-300 uppercase leading-relaxed">
+                            Points will be awarded to all strategists who predicted. Are you sure?
+                          </p>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => handleMatchAbandoned(match.id)}
+                              disabled={syncing}
+                              className="flex-1 py-2 px-3 rounded-lg bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest hover:bg-blue-400 transition-colors disabled:opacity-50"
+                            >
+                              Confirm
+                            </button>
+                            <button 
+                              onClick={() => setAbandonConfirmId(null)}
+                              disabled={syncing}
+                              className="flex-1 py-2 px-3 rounded-lg border border-white/10 bg-white/5 text-white/60 text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => setAbandonConfirmId(match.id)}
+                          disabled={isPending || syncing}
+                          className="w-full mt-3 py-3 px-4 rounded-xl border border-blue-500/10 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/20 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 text-blue-400 disabled:opacity-50"
+                        >
+                          <CloudRain className="w-3.5 h-3.5" />
+                          Mark Abandoned (+50pts)
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               );
@@ -424,10 +479,50 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
                     <div className="flex items-center gap-2">
                       <span className="text-[8px] font-mono text-white/30 uppercase">Winner:</span>
                       <span className="text-[9px] font-black uppercase text-emerald-400">
-                        {match.winner === match.team_a || match.winner === match.team_b ? match.winner : "UNKNOWN"}
+                        {match.winner === match.team_a || match.winner === match.team_b 
+                          ? match.winner 
+                          : match.winner === "abandoned" 
+                            ? "ABANDONED/DRAW" 
+                            : "UNKNOWN"}
                       </span>
                       <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                     </div>
+                  </div>
+                  
+                  {/* Retroactive Surgical Resolution Protocol (v16.2) */}
+                  <div className="mt-2">
+                    {abandonConfirmId === match.id ? (
+                      <div className="p-3 rounded-lg border border-blue-500/20 bg-blue-500/10 flex flex-col gap-2">
+                        <p className="text-[9px] font-bold text-blue-300 uppercase text-center leading-tight">
+                          Points will be awarded to all strategists who predicted. Are you sure?
+                        </p>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleMatchAbandoned(match.id)}
+                            disabled={syncing}
+                            className="flex-1 py-1.5 px-2 rounded bg-blue-500 text-white text-[8px] font-black uppercase hover:bg-blue-400 transition-colors disabled:opacity-50"
+                          >
+                            Confirm
+                          </button>
+                          <button 
+                            onClick={() => setAbandonConfirmId(null)}
+                            disabled={syncing}
+                            className="flex-1 py-1.5 px-2 rounded border border-white/10 bg-white/5 text-white/60 text-[8px] font-bold uppercase hover:bg-white/10 transition-colors disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => setAbandonConfirmId(match.id)}
+                        disabled={isPending || syncing}
+                        className="w-full py-2 px-3 rounded-lg border border-blue-500/10 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/20 text-[9px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 text-blue-400 disabled:opacity-50"
+                      >
+                        <CloudRain className="w-3 h-3" />
+                        Retroactive Abandoned (+50pts)
+                      </button>
+                    )}
                   </div>
                   
                   {/* Recalculate Buttons for Admin Override */}

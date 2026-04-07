@@ -28,6 +28,12 @@ export const calculatePoints = (
   const aWinner = (aiWinner || "").trim().toLowerCase();
   const actWinner = (actualWinner || "").trim().toLowerCase();
 
+  // ── Abandoned Match Protocol (v16.2) ────────────────────────────────────
+  // 50 point compensation for all who predicted, regardless of team choice
+  if (actWinner === "abandoned") {
+    return { points: 50, isNeuralOverride: false };
+  }
+
   // Correct Prediction: +100
   if (uWinner === actWinner) {
     points += 100;
@@ -152,14 +158,13 @@ export const processAllPredictionsForMatch = async (
       const totalCorrect = history.filter((p) => (p.points_won || 0) > 0).length;
       const newAccuracy = totalPredicted > 0 ? (totalCorrect / totalPredicted) * 100 : 0;
 
-      // 2. ATOMIC UPDATE: Increment points and update stats based on verified history
-      const matchPoints = scoringResults.find(r => r.user_id === userId)?.points_won || 0;
-      const updatedTotalPoints = (profile?.points || 0) + matchPoints;
+      // 2. ATOMIC RECONSTRUCTION: Re-calculate absolute truth from yours verified history
+      const totalPointsSum = history.reduce((sum, p) => sum + (p.points_won || 0), 0);
       
       await supabase
         .from("profiles")
         .update({
-          points: updatedTotalPoints,
+          points: totalPointsSum,
           matches_predicted: totalPredicted,
           accuracy: Math.round(newAccuracy * 10) / 10,
         })
