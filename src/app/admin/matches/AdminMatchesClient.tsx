@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState, useTransition, useCallback } from "react";
-import { updateMatchWinner, triggerManualSync, triggerGlobalAudit, triggerCachePurge } from "@/lib/data-actions";
+import { 
+  updateMatchWinner, 
+  triggerManualSync, 
+  triggerGlobalAudit, 
+  triggerCachePurge,
+  triggerTournamentRegistrySync,
+  runCollisionAudit,
+  linkMatchSurgically
+} from "@/lib/data-actions";
 import { Match, Profile } from "@/types";
 import { useRouter } from "next/navigation";
 import { 
@@ -12,7 +20,12 @@ import {
   Target, 
   ShieldAlert,
   Flame,
-  Binary
+  Binary,
+  Database,
+  Unlink,
+  ExternalLink,
+  ShieldCheck,
+  Search
 } from "lucide-react";
 
 /**
@@ -24,8 +37,63 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
   const [syncing, setSyncing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'info' | 'error' | 'success' } | null>(null);
   const [showAuditConfirm, setShowAuditConfirm] = useState(false);
+  const [conflictReport, setConflictReport] = useState<{ unlinked: any[], conflicts: any[], mapped: number } | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  const handleIdentityAudit = async () => {
+    setSyncing(true);
+    setStatusMessage({ text: "Initiating Identity Conflict Analysis...", type: "info" });
+    try {
+      const report = await runCollisionAudit();
+      setConflictReport(report);
+      setStatusMessage({ text: `Audit Complete: ${report.conflicts.length} Double-Headers discovered.`, type: "success" });
+    } catch (error) {
+      setStatusMessage({ text: "Identity Audit Failure: API link disrupted.", type: "error" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleSurgicalLink = async (matchId: string, externalId: string) => {
+    setSyncing(true);
+    setStatusMessage({ text: "Forging Permanent Identity Link...", type: "info" });
+    try {
+      await linkMatchSurgically(matchId, externalId);
+      await fetchMatches();
+      // Update local conflict report state to remove the resolved match
+      if (conflictReport) {
+        setConflictReport({
+          ...conflictReport,
+          conflicts: conflictReport.conflicts.filter(c => c.id !== matchId),
+          mapped: conflictReport.mapped + 1
+        });
+      }
+      setStatusMessage({ text: "Surgical Link Established.", type: "success" });
+    } catch (error) {
+       setStatusMessage({ text: "Linking Failure: Database mutation aborted.", type: "error" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleTournamentSync = async () => {
+    setSyncing(true);
+    setStatusMessage({ text: "Re-mapping Tournament Identities...", type: "info" });
+    try {
+      const result = await triggerTournamentRegistrySync();
+      if (result.success) {
+        await fetchMatches();
+        setStatusMessage({ text: `Registry Sync Complete: ${result.count} matches surgically linked.`, type: "success" });
+      } else {
+        setStatusMessage({ text: `Registry Error: ${result.error}`, type: "error" });
+      }
+    } catch (error) {
+      setStatusMessage({ text: "Tournament Mapping Failure: Connection lost.", type: "error" });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const fetchMatches = useCallback(async () => {
     try {
@@ -142,6 +210,15 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
           </button>
 
           <button 
+            onClick={handleTournamentSync}
+            disabled={syncing || isPending}
+            className="relative group px-6 py-3 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center gap-2 hover:bg-blue-500/20 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <Database className={`w-4 h-4 text-blue-400 ${syncing ? 'animate-pulse' : ''}`} />
+            <span className="font-mono text-xs font-bold tracking-widest uppercase text-blue-400">Sync Tournament Registry</span>
+          </button>
+
+          <button 
             onClick={handleCachePurge}
             disabled={syncing || isPending}
             className="relative group px-6 py-3 bg-white/5 border border-white/10 rounded-full flex items-center gap-2 hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50"
@@ -206,58 +283,97 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
                 <Binary className="w-12 h-12 text-white/10 mb-4" />
                 <p className="text-white/20 font-mono text-xs uppercase tracking-widest">No Active Nodes Detected</p>
               </div>
-            ) : upcomingMatches.map(match => (
-              <div 
-                key={match.id}
-                className="group relative p-6 border border-white/5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all"
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-8">
+            ) : upcomingMatches.map(match => {
+              const conflict = conflictReport?.conflicts.find(c => c.id === match.id);
+              
+              return (
+                <div 
+                  key={match.id}
+                  className={`group relative p-6 border rounded-2xl transition-all ${
+                    conflict ? 'border-purple-500/30 bg-purple-500/[0.02] hover:bg-purple-500/[0.04]' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {/* Conflict HUD Overlay */}
+                  {conflict && (
+                    <div className="absolute -top-3 left-6 px-3 py-1 bg-purple-500 rounded-full flex items-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.4)] animate-pulse">
+                      <Unlink className="w-3 h-3 text-white" />
+                      <span className="text-[9px] font-black uppercase tracking-widest text-white">Identity Collision Detected</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-8">
+                      <div className="text-right">
+                        <p className="text-sm font-bold tracking-tight">{match.team_a}</p>
+                        <p className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Host Team</p>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="w-8 h-[1px] bg-white/10" />
+                        <span className="text-[10px] font-mono text-white/20 uppercase tracking-[0.2em]">VS</span>
+                        <div className="w-8 h-[1px] bg-white/10" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold tracking-tight">{match.team_b}</p>
+                        <p className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Opponent</p>
+                      </div>
+                    </div>
+
                     <div className="text-right">
-                      <p className="text-sm font-bold tracking-tight">{match.team_a}</p>
-                      <p className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Host Team</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-8 h-[1px] bg-white/10" />
-                      <span className="text-[10px] font-mono text-white/20 uppercase tracking-[0.2em]">VS</span>
-                      <div className="w-8 h-[1px] bg-white/10" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold tracking-tight">{match.team_b}</p>
-                      <p className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Opponent</p>
+                      <p className="text-sm font-mono text-white/60">
+                        {new Date(match.match_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      <p className="text-[10px] text-emerald-400 font-mono uppercase tracking-widest flex items-center justify-end gap-1">
+                        <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
+                        Status: Upcoming
+                      </p>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <p className="text-sm font-mono text-white/60">
-                      {new Date(match.match_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    <p className="text-[10px] text-emerald-400 font-mono uppercase tracking-widest flex items-center justify-end gap-1">
-                      <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
-                      Status: Upcoming
-                    </p>
-                  </div>
+                  {/* DOUBLE HEADER RESOLUTION HUD */}
+                  {conflict ? (
+                    <div className="mt-4 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                      <p className="text-[9px] font-mono uppercase tracking-widest text-purple-300 mb-3 flex items-center gap-2">
+                        <ExternalLink className="w-3 h-3" />
+                        Surgical Identity Selection Required (Double-Header)
+                      </p>
+                      <div className="grid grid-cols-1 gap-2">
+                        {conflict.candidates.map((c: any) => (
+                          <button
+                            key={c.id}
+                            onClick={() => handleSurgicalLink(match.id, c.id)}
+                            disabled={syncing}
+                            className="flex items-center justify-between p-3 rounded-lg border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/20 transition-all text-left group/btn"
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-white/60 font-mono uppercase tracking-tight group-hover/btn:text-white transition-colors">{c.name}</span>
+                              <span className="text-[10px] font-bold text-purple-400">{new Date(c.date).toLocaleDateString()}</span>
+                            </div>
+                            <ShieldCheck className="w-4 h-4 text-purple-500 opacity-40 group-hover/btn:opacity-100 transition-all" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <button 
+                        onClick={() => handleUpdateWinner(match.id, "team_a")}
+                        disabled={isPending || syncing}
+                        className="py-3 px-4 rounded-xl border border-white/5 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/20 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        Set {match.team_a} Winner
+                      </button>
+                      <button 
+                        onClick={() => handleUpdateWinner(match.id, "team_b")}
+                        disabled={isPending || syncing}
+                        className="py-3 px-4 rounded-xl border border-white/5 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/20 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        Set {match.team_b} Winner
+                      </button>
+                    </div>
+                  )}
                 </div>
-
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button 
-                    onClick={() => handleUpdateWinner(match.id, "team_a")}
-                    disabled={isPending || syncing}
-                    className="py-3 px-4 rounded-xl border border-white/5 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/20 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    Set {match.team_a} Winner
-                  </button>
-                  <button 
-                    onClick={() => handleUpdateWinner(match.id, "team_b")}
-                    disabled={isPending || syncing}
-                    className="py-3 px-4 rounded-xl border border-white/5 bg-white/5 hover:bg-emerald-500/10 hover:border-emerald-500/20 text-[10px] font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    Set {match.team_b} Winner
-                  </button>
-                </div>
-
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 

@@ -616,3 +616,87 @@ export async function triggerGlobalAudit() {
   return await systemGlobalAudit();
 }
 
+export async function triggerTournamentRegistrySync() {
+  await requireAdmin();
+  const { syncTournamentRegistry } = await import("./ai-actions");
+  return await syncTournamentRegistry();
+}
+
+/**
+ * IDENTITY COLLISION AUDIT (v8.1)
+ * Scans internal matches against official fixtures to identify double-headers.
+ */
+export async function runCollisionAudit() {
+  await requireAdmin();
+  const { fetchSeriesInfo, TEAM_MAPPINGS } = await import("./api-service");
+  
+  // 1. Fetch Official Library
+  const SERIES_ID = "87c62aac-bc3c-4738-ab93-19da0690488f";
+  const externalMatches = await fetchSeriesInfo(SERIES_ID);
+  if (!externalMatches) throw new Error("API Connection Failure.");
+
+  // 2. Fetch Internal Nodes
+  const { data: internalMatches } = await staticSupabase
+    .from("matches")
+    .select("id, team_a, team_b, match_time, winner")
+    .order("match_time", { ascending: true });
+
+  // 3. Identification Loop
+  const report = {
+    unlinked: [] as any[],
+    conflicts: [] as any[],
+    mapped: 0
+  };
+
+  const externalMap = new Map();
+  externalMatches.forEach(em => {
+    const teams = (em.teams || []).map(t => t.toLowerCase()).sort().join('_vs_');
+    if (!externalMap.has(teams)) externalMap.set(teams, []);
+    externalMap.get(teams).push(em);
+  });
+
+  // Check which internal matches have mappings
+  const { data: currentLinks } = await staticSupabase.from("external_fixtures").select("match_id, external_id");
+  const linkedMap = new Set(currentLinks?.map(l => l.match_id) || []);
+
+  internalMatches?.forEach(im => {
+    if (linkedMap.has(im.id)) {
+      report.mapped++;
+      return;
+    }
+
+    const iTeams = [im.team_a.toLowerCase(), im.team_b.toLowerCase()].sort().join('_vs_');
+    const candidates = externalMap.get(iTeams) || [];
+
+    if (candidates.length > 1) {
+      report.conflicts.push({
+        id: im.id,
+        summary: `${im.team_a} vs ${im.team_b}`,
+        internalDate: im.match_time,
+        candidates: candidates.map((c: any) => ({ id: c.id, date: c.date, name: c.name }))
+      });
+    } else if (candidates.length === 0) {
+      report.unlinked.push({ id: im.id, summary: `${im.team_a} vs ${im.team_b} (No API Match Found)` });
+    }
+  });
+
+  return report;
+}
+
+export async function linkMatchSurgically(matchId: string, externalId: string) {
+  await requireAdmin();
+  const { createServiceClient } = await import("./auth-actions");
+  const supabase = await createServiceClient();
+
+  const { error } = await supabase.from("external_fixtures").upsert({
+    match_id: matchId,
+    external_id: externalId,
+    series_id: "87c62aac-bc3c-4738-ab93-19da0690488f"
+  }, { onConflict: "external_id" });
+
+  if (error) throw error;
+  
+  revalidatePath("/admin/matches");
+  return { success: true };
+}
+

@@ -9,8 +9,86 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-import { fetchRecentResults, determineWinner, fetchMatchInfo, TEAM_MAPPINGS } from "./api-service";
+import { 
+  fetchRecentResults, 
+  determineWinner, 
+  fetchMatchInfo, 
+  fetchSeriesInfo, 
+  TEAM_MAPPINGS 
+} from "./api-service";
 import { processAllPredictionsForMatch, logSystemActivity } from "./scoring";
+
+/**
+ * THE REGISTRY PULSE (v6.8)
+ * Populates the external_fixtures table with all 70 matches from the series.
+ * Performs a greedy alignment to link your 64 prediction nodes to their official IDs.
+ */
+export async function syncTournamentRegistry(seriesId: string = "87c62aac-bc3c-4738-ab93-19da0690488f") {
+  const supabase = await createServiceClient();
+  console.log(`Strategic Pulse: Resynchronizing Tournament Registry for Series ${seriesId}...`);
+
+  try {
+    // 1. Fetch High-Fidelity Fixture List (The Library)
+    const externalMatches = await fetchSeriesInfo(seriesId);
+    if (!externalMatches) throw new Error("Could not retrieve fixture list from Series ID.");
+
+    // 🛡️ STEP A: Library Population (All 70 Matches)
+    for (const em of externalMatches) {
+       await supabase.from("external_fixtures").upsert({
+          external_id: em.id,
+          series_id: seriesId,
+          name: em.name,
+          date: em.date,
+          status: em.status
+       }, { onConflict: 'external_id' });
+    }
+
+    // 🛡️ STEP B: Identity Alignment Pulse (Mapping ours internal nodes)
+    const { data: internalMatches } = await supabase.from("matches").select("id, team_a, team_b, match_time").order("match_time", { ascending: true });
+    if (!internalMatches) return { success: false, reason: "No internal matches found." };
+
+    let linkedCount = 0;
+    const usedExternalIds = new Set<string>();
+
+    for (const match of internalMatches) {
+      // Find matching external fixture (Greedy Multi-Pass)
+      const potentialMatches = externalMatches
+        .filter(em => {
+          const emTeams = (em.teams || []).map(t => t.toLowerCase());
+          const aliasesA = [match.team_a, ...(TEAM_MAPPINGS[match.team_a] || [])].map(a => a.toLowerCase());
+          const aliasesB = [match.team_b, ...(TEAM_MAPPINGS[match.team_b] || [])].map(b => b.toLowerCase());
+          return emTeams.some(t => aliasesA.some(a => t.includes(a) || a.includes(t))) && 
+                 emTeams.some(t => aliasesB.some(b => t.includes(b) || b.includes(t)));
+        })
+        .filter(em => !usedExternalIds.has(em.id));
+
+      if (potentialMatches.length > 0) {
+        // High-Fidelity Pick: Prefer the closest date, but fallback to sequential if many exist
+        let bestMatch = potentialMatches[0];
+        let minDiff = Infinity;
+        
+        for (const pm of potentialMatches) {
+           const diff = Math.abs(new Date(match.match_time).getTime() - new Date(pm.date).getTime());
+           if (diff < minDiff) { 
+              minDiff = diff; 
+              bestMatch = pm; 
+           }
+        }
+
+        await supabase.from("external_fixtures").update({ match_id: match.id }).eq("external_id", bestMatch.id);
+        usedExternalIds.add(bestMatch.id);
+        linkedCount++;
+      }
+    }
+
+    await logSystemActivity('sync', 'success', `Tournament Registry Synchronized: ${linkedCount} matches surgically linked.`);
+    revalidatePath("/admin/matches");
+    return { success: true, count: linkedCount };
+  } catch (error: any) {
+    console.error("Registry Sync Failure:", error);
+    return { success: false, error: error.message };
+  }
+}
 
 /**
  * NEURAL PRIMARY: Identifies the winner of a match using OpenAI's research pulse.
@@ -184,7 +262,6 @@ export async function systemResultSync() {
 
   for (const match of pastMatches) {
     let actualWinnerName: string | null = null;
-    let resolutionSource: "MAPPING_ID" | "NEURAL" | "API" | null = null;
 
     // 🛡️ SUB-PULSE A: SURGICAL ID MAPPING (Tournament-Centric)
     const { data: linkage } = await supabase
@@ -201,46 +278,7 @@ export async function systemResultSync() {
          const winnerKey = determineWinner(extMatch, match.team_a, match.team_b);
          if (winnerKey) {
             actualWinnerName = winnerKey === "team_a" ? match.team_a : match.team_b;
-            resolutionSource = "MAPPING_ID";
          }
-      }
-    }
-
-    // 🛡️ SUB-PULSE B: NEURAL EMERGENCY (OpenAI Search) - Only if mapping fails
-    if (!actualWinnerName) {
-      try {
-        const neuralResult = await verifyWinnerWithNeuralResearch(match);
-        if (neuralResult && neuralResult.winner_name && neuralResult.winner_name !== "Draw") {
-          actualWinnerName = neuralResult.winner_name;
-          resolutionSource = "NEURAL";
-        }
-      } catch (e) {
-        process.stdout.write(`Neural Pulse Bypass for ${match.id}\r`);
-      }
-    }
-
-    // 🛡️ SUB-PULSE C: API DEEP FALLBACK (Original firehose logic)
-    if (!actualWinnerName) {
-      try {
-        if (!externalResults) externalResults = await fetchRecentResults();
-        
-        const fallbackMatch = externalResults.find(em => {
-            const teamNames = (em.teams || []).map((t: string) => t.toLowerCase());
-            const aliasesA = [match.team_a, ...(TEAM_MAPPINGS[match.team_a] || [])].map(a => a.toLowerCase());
-            const aliasesB = [match.team_b, ...(TEAM_MAPPINGS[match.team_b] || [])].map(b => b.toLowerCase());
-            return teamNames.some((t: string) => aliasesA.some(a => t.includes(a) || a.includes(t))) && 
-                   teamNames.some((t: string) => aliasesB.some(b => t.includes(b) || b.includes(t)));
-        });
-
-        if (fallbackMatch) {
-           const winnerKey = determineWinner(fallbackMatch, match.team_a, match.team_b);
-           if (winnerKey) {
-              actualWinnerName = winnerKey === "team_a" ? match.team_a : match.team_b;
-              resolutionSource = "API";
-           }
-        }
-      } catch (e) {
-        console.error("API Backup Failure:", e);
       }
     }
 
@@ -249,11 +287,11 @@ export async function systemResultSync() {
       await processAllPredictionsForMatch(match.id, actualWinnerName, match.ai_prediction);
       await supabase.from("matches").update({ winner: actualWinnerName, status: "completed" }).eq("id", match.id);
       
-      const successMsg = `Match resolved via ${resolutionSource}: ${match.team_a} vs ${match.team_b} (${actualWinnerName} won).`;
+      const successMsg = `Match resolved via SURGICAL_ID: ${match.team_a} vs ${match.team_b} (${actualWinnerName} won).`;
       await logSystemActivity('result', 'success', successMsg);
       resolvedCount++;
     } else {
-      const failMsg = `Sync Failure: No verified winner found (MAPPING/AI/API exhausted) for ${match.team_a} vs ${match.team_b}.`;
+      const failMsg = `Sync Failure: No surgical mapping ID found for ${match.team_a} vs ${match.team_b}. Please trigger 'Sync Tournament Registry'.`;
       await logSystemActivity('result', 'failure', failMsg, { matchId: match.id });
     }
   }

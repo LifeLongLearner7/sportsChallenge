@@ -20,16 +20,16 @@ export interface ExternalMatch {
 }
 
 export const TEAM_MAPPINGS: Record<string, string[]> = {
-  "RCB": ["Royal Challengers Bangalore", "Royal Challengers Bengaluru", "RCB"],
-  "SRH": ["Sunrisers Hyderabad", "SRH"],
-  "CSK": ["Chennai Super Kings", "CSK"],
-  "MI": ["Mumbai Indians", "MI"],
-  "KKR": ["Kolkata Knight Riders", "KKR"],
-  "RR": ["Rajasthan Royals", "RR"],
-  "DC": ["Delhi Capitals", "DC"],
-  "GT": ["Gujarat Titans", "GT"],
-  "LSG": ["Lucknow Super Giants", "LSG"],
-  "PBKS": ["Punjab Kings", "PBKS"]
+  "RCB": ["Royal Challengers Bangalore", "Royal Challengers Bengaluru", "RCB", "Bangalore", "Bengaluru"],
+  "SRH": ["Sunrisers Hyderabad", "SRH", "Hyderabad"],
+  "CSK": ["Chennai Super Kings", "CSK", "Chennai"],
+  "MI": ["Mumbai Indians", "MI", "Mumbai"],
+  "KKR": ["Kolkata Knight Riders", "KKR", "Kolkata"],
+  "RR": ["Rajasthan Royals", "RR", "Rajasthan"],
+  "DC": ["Delhi Capitals", "DC", "Delhi"],
+  "GT": ["Gujarat Titans", "GT", "Gujarat"],
+  "LSG": ["Lucknow Super Giants", "LSG", "Lucknow"],
+  "PBKS": ["Punjab Kings", "PBKS", "Punjab"]
 };
 
 
@@ -135,6 +135,28 @@ export async function fetchMatchInfo(externalId: string) {
     return result.data as ExternalMatch;
   } catch (error) {
     console.error(`Network Error fetching Match ${externalId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Fetches all matches for a specific series.
+ */
+export async function fetchSeriesInfo(seriesId: string) {
+  if (!API_KEY) return null;
+
+  try {
+    const response = await fetch(`${BASE_URL}/series_info?apikey=${API_KEY}&id=${seriesId}`);
+    const result = await response.json();
+
+    if (result.status !== "success") {
+      console.error(`API Error for Series ${seriesId}:`, result.reason);
+      return null;
+    }
+
+    return result.data.matchList as ExternalMatch[];
+  } catch (error) {
+    console.error(`Network Error fetching Series ${seriesId}:`, error);
     return null;
   }
 }
