@@ -188,3 +188,20 @@ CREATE TRIGGER trigger_update_predictions_timestamp
   BEFORE UPDATE ON predictions
   FOR EACH ROW
   EXECUTE FUNCTION handle_updated_at();
+
+-- ── EXTERNAL FIXTURE REGISTRY (v6.9) ─────────────────────────────────────────
+-- Links internal match nodes to external CricAPI fixtures
+CREATE TABLE external_fixtures (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  external_id TEXT UNIQUE NOT NULL, -- Official API ID
+  series_id TEXT NOT NULL,
+  match_id UUID REFERENCES matches(id) ON DELETE SET NULL,
+  name TEXT,
+  date TEXT,
+  status TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_match_series UNIQUE (match_id, series_id)
+);
+
+CREATE POLICY "Public read access for external_fixtures" ON external_fixtures FOR SELECT USING (true);
+ALTER TABLE external_fixtures ENABLE ROW LEVEL SECURITY;

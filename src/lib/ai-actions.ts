@@ -28,22 +28,33 @@ export async function syncTournamentRegistry(seriesId: string = "87c62aac-bc3c-4
   console.log(`Strategic Pulse: Resynchronizing Tournament Registry for Series ${seriesId}...`);
 
   try {
-    // 1. Fetch High-Fidelity Fixture List (The Library)
+    // 🛡️ STEP 0: Nuclear Reset (Clean Slate for this Series)
+    // Wipe all existing fixture data and mappings for this series to prevent identity ghosting
+    const { error: deleteError } = await supabase
+      .from("external_fixtures")
+      .delete()
+      .eq("series_id", seriesId);
+
+    if (deleteError) {
+      console.error("Strategic Reset Failure:", deleteError);
+      throw new Error("Could not clear existing registry data.");
+    }
+
+    // 🛡️ STEP 1: Library Re-Population (Fetching all 70 Matches)
     const externalMatches = await fetchSeriesInfo(seriesId);
     if (!externalMatches) throw new Error("Could not retrieve fixture list from Series ID.");
 
-    // 🛡️ STEP A: Library Population (All 70 Matches)
     for (const em of externalMatches) {
-       await supabase.from("external_fixtures").upsert({
+       await supabase.from("external_fixtures").insert({
           external_id: em.id,
           series_id: seriesId,
           name: em.name,
           date: em.date,
           status: em.status
-       }, { onConflict: 'external_id' });
+       });
     }
 
-    // 🛡️ STEP B: Identity Alignment Pulse (Mapping ours internal nodes)
+    // 🛡️ STEP 2: Identity Alignment Pulse (Mapping our internal nodes)
     const { data: internalMatches } = await supabase.from("matches").select("id, team_a, team_b, match_time").order("match_time", { ascending: true });
     if (!internalMatches) return { success: false, reason: "No internal matches found." };
 
@@ -63,7 +74,7 @@ export async function syncTournamentRegistry(seriesId: string = "87c62aac-bc3c-4
         .filter(em => !usedExternalIds.has(em.id));
 
       if (potentialMatches.length > 0) {
-        // High-Fidelity Pick: Prefer the closest date, but fallback to sequential if many exist
+        // High-Fidelity Pick: Prefer the closest date
         let bestMatch = potentialMatches[0];
         let minDiff = Infinity;
         
@@ -264,6 +275,9 @@ export async function systemResultSync() {
     let actualWinnerName: string | null = null;
 
     // 🛡️ SUB-PULSE A: SURGICAL ID MAPPING (Tournament-Centric)
+    let linkageFound = false;
+    let externalId: string | null = null;
+
     const { data: linkage } = await supabase
       .from("external_fixtures")
       .select("external_id")
@@ -271,8 +285,31 @@ export async function systemResultSync() {
       .single();
 
     if (linkage?.external_id) {
-      console.log(`Surgical Scan: Match ${match.id} linked to External ID ${linkage.external_id}. Probing Match Info...`);
-      const extMatch = await fetchMatchInfo(linkage.external_id);
+      externalId = linkage.external_id;
+      linkageFound = true;
+    } else {
+      // 🕵️ AUTO-HEALING: No Mapping ID Found. Initiate Surgical Registry Repair (v1.1)
+      console.log(`Neural Detection: Linkage gap discovered for ${match.team_a} vs ${match.team_b}. Initiating Auto-Repair...`);
+      const repairResult = await syncTournamentRegistry();
+      
+      if (repairResult.success) {
+        const { data: repairedLink } = await supabase
+          .from("external_fixtures")
+          .select("external_id")
+          .eq("match_id", match.id)
+          .single();
+        
+        if (repairedLink?.external_id) {
+          externalId = repairedLink.external_id;
+          linkageFound = true;
+          console.log(`Auto-Repair Successful: ID ${externalId} forged for ${match.team_a} vs ${match.team_b}.`);
+        }
+      }
+    }
+
+    if (linkageFound && externalId) {
+      console.log(`Surgical Scan: Match ${match.id} linked to External ID ${externalId}. Probing Match Info...`);
+      const extMatch = await fetchMatchInfo(externalId);
       
       if (extMatch) {
          const winnerKey = determineWinner(extMatch, match.team_a, match.team_b);
