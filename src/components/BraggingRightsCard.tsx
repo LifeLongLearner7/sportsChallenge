@@ -14,9 +14,6 @@ interface BraggingRightsCardProps {
 }
 
 export default function BraggingRightsCard({ currentStreak, aiBeatenCount, userId }: BraggingRightsCardProps) {
-  // If no stats, don't show the card to keep the UI clean
-  if (currentStreak === 0 && aiBeatenCount === 0) return null;
-
   return (
     <div className="glass-panel p-8 rounded-3xl flex flex-col gap-6 relative overflow-hidden border-tertiary/20">
       {/* Background ambient glow */}
