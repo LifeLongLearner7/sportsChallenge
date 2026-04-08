@@ -75,30 +75,36 @@ export const getMatches = unstable_cache(
  * CACHED PROFILE FETCHER (Phase 4.2.1)
  * Decoupled from the dynamic 'cookies' scope to satisfy unstable_cache requirements.
  */
-export const getPublicProfile = unstable_cache(
-  async (userId: string, email?: string) => {
-    const { data: profile } = await staticSupabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+export async function getPublicProfile(userId: string, email?: string) {
+  if (!userId) return null;
+  
+  const fetcher = unstable_cache(
+    async () => {
+      const { data: profile } = await staticSupabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-    if (!profile) {
-      return {
-        id: userId,
-        screen_name: email?.split("@")[0] || "New Strategist",
-        points: 0,
-        matches_predicted: 0,
-        accuracy: 0,
-        is_admin: false,
-      } as Profile;
-    }
+      if (!profile) {
+        return {
+          id: userId,
+          screen_name: email?.split("@")[0] || "New Strategist",
+          points: 0,
+          matches_predicted: 0,
+          accuracy: 0,
+          is_admin: false,
+        } as Profile;
+      }
 
-    return profile as Profile;
-  },
-  ["user-profile-session"],
-  { revalidate: 1800, tags: ["user-profile-session"] }
-);
+      return profile as Profile;
+    },
+    [`user-profile-session-${userId}`],
+    { revalidate: 1800, tags: [`user-profile-session-${userId}`] }
+  );
+
+  return fetcher();
+}
 
 /**
  * DYNAMIC IDENTITY WRAPPER
@@ -736,36 +742,42 @@ export async function linkMatchSurgically(matchId: string, externalId: string) {
   return { success: true };
 }
 
-export const getUserBraggingStats = unstable_cache(
-  async (userId: string) => {
-    // Fetch predictions with match status to ensure we only count resolved matches
-    const { data: predictions, error } = await staticSupabase
-      .from("predictions")
-      .select("points_won, is_neural_override, created_at, matches ( status )")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+export async function getUserBraggingStats(userId: string) {
+  if (!userId) return { currentStreak: 0, aiBeatenCount: 0 };
+  
+  const fetcher = unstable_cache(
+    async () => {
+      // Fetch predictions with match status to ensure we only count resolved matches
+      const { data: predictions, error } = await staticSupabase
+        .from("predictions")
+        .select("points_won, is_neural_override, created_at, matches ( status )")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
 
-    if (error || !predictions) {
-      return { currentStreak: 0, aiBeatenCount: 0 };
-    }
-
-    // Filter to only resolved matches
-    const resolvedPredictions = predictions.filter((p: any) => p.matches?.status === "completed");
-
-    let currentStreak = 0;
-    for (const p of resolvedPredictions) {
-      if ((p.points_won || 0) > 0) {
-        currentStreak++;
-      } else {
-        break; // Streak broken on the first loss
+      if (error || !predictions) {
+        return { currentStreak: 0, aiBeatenCount: 0 };
       }
-    }
 
-    const aiBeatenCount = resolvedPredictions.filter((p: any) => p.is_neural_override).length;
+      // Filter to only resolved matches
+      const resolvedPredictions = predictions.filter((p: any) => p.matches?.status === "completed");
 
-    return { currentStreak, aiBeatenCount };
-  },
-  ["user-bragging-stats"],
-  { revalidate: 1800, tags: ["user-bragging-stats"] }
-);
+      let currentStreak = 0;
+      for (const p of resolvedPredictions) {
+        if ((p.points_won || 0) > 0) {
+          currentStreak++;
+        } else {
+          break; // Streak broken on the first loss
+        }
+      }
+
+      const aiBeatenCount = resolvedPredictions.filter((p: any) => p.is_neural_override).length;
+
+      return { currentStreak, aiBeatenCount };
+    },
+    [`user-bragging-stats-${userId}`],
+    { revalidate: 1800, tags: [`user-bragging-stats-${userId}`] }
+  );
+
+  return fetcher();
+}
 
