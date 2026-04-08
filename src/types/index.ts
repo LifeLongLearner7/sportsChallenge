@@ -12,6 +12,7 @@ export interface Match {
   ai_prediction?: string;
   ai_confidence?: number;
   ai_reasoning?: string;
+  match_intel?: string;
   winner?: string;
   outfoxed_count?: number;
   updated_at?: string;

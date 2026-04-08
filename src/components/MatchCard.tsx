@@ -112,6 +112,19 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
           </div>
         </div>
 
+        {/* Match Intel Section */}
+        {match.match_intel && match.match_intel !== "No live news available." && (
+           <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg mt-2 group/intel cursor-pointer transition-all hover:bg-blue-500/20">
+             <div className="flex items-center gap-2 mb-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></div>
+                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Live Match Intel</span>
+             </div>
+             <p className="text-xs text-blue-200/70 line-clamp-2 group-hover/intel:line-clamp-none transition-all leading-relaxed">
+               {match.match_intel}
+             </p>
+           </div>
+        )}
+
         {/* Prediction Controls or AI Reveal */}
         <div className="mt-4 pt-6 border-t border-white/5">
           {!hasPredicted && isUpcoming ? (

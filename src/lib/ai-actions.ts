@@ -146,8 +146,10 @@ export async function verifyWinnerWithNeuralResearch(match: Match) {
 }
 
 
+import { tavily } from "@tavily/core";
+
 /**
- * Generate a specialized strategic prediction for a match using OpenAI
+ * Generate a specialized strategic prediction for a match using OpenAI + Tavily RAG
  */
 export async function generateMatchPrediction(match: Match) {
   if (!process.env.OPENAI_API_KEY) {
@@ -155,8 +157,30 @@ export async function generateMatchPrediction(match: Match) {
     return null;
   }
 
+  let liveContext = "No live news available.";
+  
+  if (process.env.TAVILY_API_KEY) {
+    try {
+      const tvly = tavily({ apiKey: process.env.TAVILY_API_KEY });
+      const query = `${match.team_a} vs ${match.team_b} cricket match preview pitch report injuries news`;
+      
+      console.log(`Strategic Pulse: Initiating LIVE RECON via Tavily for ${match.team_a} vs ${match.team_b}...`);
+      
+      const searchResponse = await tvly.search(query, {
+        searchDepth: "basic",
+        maxResults: 3
+      });
+      
+      if (searchResponse.results && searchResponse.results.length > 0) {
+        liveContext = searchResponse.results.map((r: any) => r.content).join("\n\n");
+      }
+    } catch (searchError) {
+      console.error("TAVILY RECON FAILURE:", searchError);
+    }
+  }
+
   const prompt = `
-    You are 'SPORTS-AI-CORE', a high-fidelity sports analysis AI designed for the IPL 2026 season.Expert at analyses based on team players, pitch and immediate performance. 
+    You are 'SPORTS-AI-CORE', a high-fidelity sports analysis AI designed for the IPL season. Expert at analyses based on team players, pitch and immediate performance. 
     Task: Predict the winning likelihood and provide strategic reasoning for the following T20 fixture. 
     
     Match Information:
@@ -164,10 +188,13 @@ export async function generateMatchPrediction(match: Match) {
     Venue: ${match.venue || "TBD"}
     Date: ${new Date(match.match_time).toLocaleDateString()}
     
+    LIVE INTEL (RECENT SEARCH RESULTS):
+    ${liveContext}
+    
     Format Requirements:
     - winner: Must be exactly ${match.team_a} or ${match.team_b}
     - confidence: An integer between 50 and 99
-    - reasoning: A technical, data-driven strategic insight (Exactly 130-150 characters)
+    - reasoning: A technical, data-driven strategic insight incorporating the live intel (Exactly 130-150 characters)
     
     Return ONLY a raw JSON object. No markdown, no prose.
     Example: {"winner": "RCB", "confidence": 78, "reasoning": "RCB's middle order stability on high scoring Bengaluru surfaces gives them a 14% higher operational efficiency than SRH's current pace attack."}
@@ -182,6 +209,7 @@ export async function generateMatchPrediction(match: Match) {
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
+    result.match_intel = liveContext; // Expose the raw intel so it can be saved to the database
     return result;
   } catch (err) {
     console.error("NEURAL LINK FAILURE:", err);
@@ -380,7 +408,8 @@ export async function systemPredictionSync() {
               .update({
                 ai_prediction: actualAiPick,
                 ai_confidence: prediction.confidence,
-                ai_reasoning: prediction.reasoning
+                ai_reasoning: prediction.reasoning,
+                match_intel: prediction.match_intel
               })
               .eq("id", match.id);
 

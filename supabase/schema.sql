@@ -30,6 +30,7 @@ CREATE TABLE matches (
   ai_prediction TEXT, -- Team name
   ai_confidence FLOAT,
   ai_reasoning TEXT,
+  match_intel TEXT, -- Technical Intel from Tavily RAG
   outfoxed_count INTEGER DEFAULT 0, -- Track strategists who beat the AI
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
