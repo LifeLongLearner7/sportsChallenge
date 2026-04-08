@@ -736,3 +736,36 @@ export async function linkMatchSurgically(matchId: string, externalId: string) {
   return { success: true };
 }
 
+export const getUserBraggingStats = unstable_cache(
+  async (userId: string) => {
+    // Fetch predictions with match status to ensure we only count resolved matches
+    const { data: predictions, error } = await staticSupabase
+      .from("predictions")
+      .select("points_won, is_neural_override, created_at, matches ( status )")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error || !predictions) {
+      return { currentStreak: 0, aiBeatenCount: 0 };
+    }
+
+    // Filter to only resolved matches
+    const resolvedPredictions = predictions.filter((p: any) => p.matches?.status === "completed");
+
+    let currentStreak = 0;
+    for (const p of resolvedPredictions) {
+      if ((p.points_won || 0) > 0) {
+        currentStreak++;
+      } else {
+        break; // Streak broken on the first loss
+      }
+    }
+
+    const aiBeatenCount = resolvedPredictions.filter((p: any) => p.is_neural_override).length;
+
+    return { currentStreak, aiBeatenCount };
+  },
+  ["user-bragging-stats"],
+  { revalidate: 1800, tags: ["user-bragging-stats"] }
+);
+

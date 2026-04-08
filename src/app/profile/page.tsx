@@ -1,6 +1,6 @@
 import { User, Shield, Zap, Trophy } from "lucide-react";
 import Image from "next/image";
-import { getUserProfile, getUserDetailedHistory, getUserRank, getTotalStrategists } from "@/lib/data-actions";
+import { getUserProfile, getUserDetailedHistory, getUserRank, getTotalStrategists, getUserBraggingStats } from "@/lib/data-actions";
 import { AVATARS } from "@/lib/constants";
 import { 
   calculateLevel, 
@@ -11,6 +11,7 @@ import {
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import DossierHistory from "@/components/DossierHistory";
+import BraggingRightsCard from "@/components/BraggingRightsCard";
 
 import { Suspense } from "react";
 
@@ -24,9 +25,10 @@ export default async function ProfilePage() {
   if (!profile) return null;
 
   // Parallelize rank and global stats fetch
-  const [rank, totalUsers] = await Promise.all([
+  const [rank, totalUsers, braggingStats] = await Promise.all([
     getUserRank(profile.id),
-    getTotalStrategists()
+    getTotalStrategists(),
+    getUserBraggingStats(profile.id)
   ]);
   
   // Find the selected avatar icon
@@ -85,6 +87,11 @@ export default async function ProfilePage() {
           <div className="text-2xl font-headline font-black text-white italic">#{rank}</div>
         </div>
       </div>
+
+      <BraggingRightsCard 
+        currentStreak={braggingStats.currentStreak} 
+        aiBeatenCount={braggingStats.aiBeatenCount} 
+      />
 
       <div className="glass-panel p-8 rounded-3xl flex flex-col gap-6">
          <div className="flex items-center justify-between">
