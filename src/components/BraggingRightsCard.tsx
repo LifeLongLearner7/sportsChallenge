@@ -10,9 +10,10 @@ function cn(...inputs: ClassValue[]) {
 interface BraggingRightsCardProps {
   currentStreak: number;
   aiBeatenCount: number;
+  userId: string;
 }
 
-export default function BraggingRightsCard({ currentStreak, aiBeatenCount }: BraggingRightsCardProps) {
+export default function BraggingRightsCard({ currentStreak, aiBeatenCount, userId }: BraggingRightsCardProps) {
   // If no stats, don't show the card to keep the UI clean
   if (currentStreak === 0 && aiBeatenCount === 0) return null;
 
@@ -31,7 +32,7 @@ export default function BraggingRightsCard({ currentStreak, aiBeatenCount }: Bra
           </p>
         </div>
         
-        <ShareButtons currentStreak={currentStreak} aiBeatenCount={aiBeatenCount} />
+        <ShareButtons currentStreak={currentStreak} aiBeatenCount={aiBeatenCount} userId={userId} />
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4 relative z-10">

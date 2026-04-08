@@ -12,13 +12,14 @@ function cn(...inputs: ClassValue[]) {
 interface ShareButtonsProps {
   currentStreak: number;
   aiBeatenCount: number;
+  userId: string;
 }
 
-export default function ShareButtons({ currentStreak, aiBeatenCount }: ShareButtonsProps) {
+export default function ShareButtons({ currentStreak, aiBeatenCount, userId }: ShareButtonsProps) {
   const [isCopied, setIsCopied] = useState(false);
 
-  // Using the official web URL
-  const url = "https://sports-challenge.vercel.app";
+  // Using the official web URL with the specific public status page
+  const url = `https://sports-challenge.vercel.app/status/${userId}`;
 
   const shareText = `🔥 I'm on a ${currentStreak}-match winning streak on SportsChallenge! I've also outfoxed Mr. Predicto ${aiBeatenCount} times. Can you beat my predictive prowess? 🏆`;
 

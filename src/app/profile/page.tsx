@@ -91,6 +91,7 @@ export default async function ProfilePage() {
       <BraggingRightsCard 
         currentStreak={braggingStats.currentStreak} 
         aiBeatenCount={braggingStats.aiBeatenCount} 
+        userId={profile.id}
       />
 
       <div className="glass-panel p-8 rounded-3xl flex flex-col gap-6">

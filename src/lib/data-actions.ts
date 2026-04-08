@@ -75,7 +75,7 @@ export const getMatches = unstable_cache(
  * CACHED PROFILE FETCHER (Phase 4.2.1)
  * Decoupled from the dynamic 'cookies' scope to satisfy unstable_cache requirements.
  */
-const fetchProfileFromDb = unstable_cache(
+export const getPublicProfile = unstable_cache(
   async (userId: string, email?: string) => {
     const { data: profile } = await staticSupabase
       .from("profiles")
@@ -111,7 +111,7 @@ export async function getUserProfile() {
   if (!user) return null;
   
   // Pass stable ID and fallback email to the cached data layer
-  return await fetchProfileFromDb(user.id, user.email);
+  return await getPublicProfile(user.id, user.email);
 }
 
 
