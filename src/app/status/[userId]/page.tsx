@@ -12,14 +12,15 @@ function cn(...inputs: ClassValue[]) {
 export const revalidate = 1800; // Cache this page broadly 
 
 interface Props {
-  params: { userId: string };
+  params: Promise<{ userId: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const profile = await getPublicProfile(params.userId);
-  if (!profile || profile.id !== params.userId) return {};
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const { userId } = await props.params;
+  const profile = await getPublicProfile(userId);
+  if (!profile || profile.id !== userId) return {};
 
-  const stats = await getUserBraggingStats(params.userId);
+  const stats = await getUserBraggingStats(userId);
 
   const baseUrl = "https://sports-challenge.vercel.app";
   
@@ -54,11 +55,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PublicStatusPage({ params }: Props) {
-  const profile = await getPublicProfile(params.userId);
-  if (!profile || profile.id !== params.userId) notFound();
+export default async function PublicStatusPage(props: Props) {
+  const { userId } = await props.params;
+  const profile = await getPublicProfile(userId);
+  if (!profile || profile.id !== userId) notFound();
 
-  const stats = await getUserBraggingStats(params.userId);
+  const stats = await getUserBraggingStats(userId);
 
   const selectedAvatar = AVATARS.find(a => a.id === profile.avatar_url) || AVATARS[0];
   const aiAvatar = MR_PREDICTO_AVATAR;
@@ -121,7 +123,7 @@ export default async function PublicStatusPage({ params }: Props) {
 
         <div className="flex justify-center mt-12 z-10">
            <Link href="/" className="px-8 py-4 bg-primary text-background font-black uppercase italic rounded-full shadow-[0_0_20px_rgba(129,236,255,0.4)] hover:scale-105 transition-transform">
-             Play SportsChallenge Now
+             Play SportsAIChallenge Now
            </Link>
         </div>
       </div>
