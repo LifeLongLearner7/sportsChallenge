@@ -162,7 +162,12 @@ export async function generateMatchPrediction(match: Match) {
   if (process.env.TAVILY_API_KEY) {
     try {
       const tvly = tavily({ apiKey: process.env.TAVILY_API_KEY });
-      const query = `${match.team_a} vs ${match.team_b} IPL 2026 cricket match preview pitch report latest news injuries`;
+      
+      const matchDateStr = new Date(match.match_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      const venueStr = match.venue && match.venue !== "TBD" ? match.venue : "";
+      
+      // Strict parameterization to force the search engine to hone in on the exact fixture
+      const query = `IPL 2026 ${match.team_a} vs ${match.team_b} ${venueStr} ${matchDateStr} cricket match preview pitch report latest news injuries`;
       
       console.log(`Strategic Pulse: Initiating LIVE RECON via Tavily for ${match.team_a} vs ${match.team_b}...`);
       
