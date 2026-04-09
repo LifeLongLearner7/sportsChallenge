@@ -119,7 +119,7 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></div>
                 <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Live Match Intel</span>
              </div>
-             <p className="text-xs text-blue-200/70 line-clamp-2 group-hover/intel:line-clamp-none transition-all leading-relaxed">
+             <p className="text-xs text-blue-200/70 line-clamp-2 group-hover/intel:line-clamp-none transition-all leading-relaxed whitespace-pre-line">
                {match.match_intel}
              </p>
            </div>

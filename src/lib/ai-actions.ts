@@ -202,9 +202,12 @@ export async function generateMatchPrediction(match: Match) {
     - winner: Must be exactly ${match.team_a} or ${match.team_b}
     - confidence: An integer between 50 and 99
     - reasoning: A technical, data-driven strategic insight incorporating the live intel (Exactly 130-150 characters)
+    - match_intel: A heavily structured synthesis of the LIVE INTEL formatted exactly like this:
+        "Pitch Report: ...\nProbable XI: ...\nInjuries: ...\nWeather: ..."
+        (If exact data isn't in the intel, make a strong analytical assumption to fill the gaps).
     
     Return ONLY a raw JSON object. No markdown, no prose.
-    Example: {"winner": "RCB", "confidence": 78, "reasoning": "RCB's middle order stability on high scoring Bengaluru surfaces gives them a 14% higher operational efficiency than SRH's current pace attack."}
+    Example: {"winner": "RCB", "confidence": 78, "reasoning": "RCB's middle order stability on high scoring Bengaluru surfaces gives them a 14% higher operational efficiency than SRH's current pace attack.", "match_intel": "Pitch Report: Flat track, high scoring...\nProbable XI: Kohli, Faf...\nInjuries: None...\nWeather: Clear sky"}
   `;
 
   try {
@@ -216,7 +219,10 @@ export async function generateMatchPrediction(match: Match) {
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
-    result.match_intel = liveContext; // Expose the raw intel so it can be saved to the database
+    // Ensure fallback if match_intel wasn't generated
+    if (!result.match_intel) {
+      result.match_intel = liveContext; 
+    }
     return result;
   } catch (err) {
     console.error("NEURAL LINK FAILURE:", err);
