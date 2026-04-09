@@ -162,13 +162,15 @@ export async function generateMatchPrediction(match: Match) {
   if (process.env.TAVILY_API_KEY) {
     try {
       const tvly = tavily({ apiKey: process.env.TAVILY_API_KEY });
-      const query = `${match.team_a} vs ${match.team_b} cricket match preview pitch report injuries news`;
+      const query = `${match.team_a} vs ${match.team_b} IPL 2026 cricket match preview pitch report latest news injuries`;
       
       console.log(`Strategic Pulse: Initiating LIVE RECON via Tavily for ${match.team_a} vs ${match.team_b}...`);
       
       const searchResponse = await tvly.search(query, {
         searchDepth: "basic",
-        maxResults: 3
+        maxResults: 3,
+        topic: "news",
+        days: 14 // Only pull articles from the last 14 days
       });
       
       if (searchResponse.results && searchResponse.results.length > 0) {
