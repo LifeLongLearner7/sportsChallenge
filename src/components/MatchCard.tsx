@@ -19,6 +19,7 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
   const [formattedDate, setFormattedDate] = useState<string>("");
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isLocked, setIsLocked] = useState(false);
+  const [isIntelExpanded, setIsIntelExpanded] = useState(false);
   const isUpcoming = match.status === "upcoming" || match.status === "active";
   const hasPredicted = !!userPrediction;
 
@@ -114,14 +115,23 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
 
         {/* Match Intel Section */}
         {match.match_intel && match.match_intel !== "No live news available." && (
-           <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg mt-2 group/intel cursor-pointer transition-all hover:bg-blue-500/20">
+           <div 
+             onClick={() => setIsIntelExpanded(!isIntelExpanded)}
+             className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg mt-2 cursor-pointer transition-all hover:bg-blue-500/20 active:bg-blue-500/30"
+           >
              <div className="flex items-center gap-2 mb-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></div>
                 <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Live Match Intel</span>
              </div>
-             <p className="text-xs text-blue-200/70 line-clamp-2 group-hover/intel:line-clamp-none transition-all leading-relaxed whitespace-pre-line">
+             <p className={cn(
+               "text-xs text-blue-200/70 transition-all leading-relaxed whitespace-pre-line",
+               !isIntelExpanded && "line-clamp-2"
+             )}>
                {match.match_intel}
              </p>
+             {!isIntelExpanded && (
+               <div className="text-[8px] text-blue-400/50 uppercase tracking-widest text-center mt-1">Tap to read more</div>
+             )}
            </div>
         )}
 
