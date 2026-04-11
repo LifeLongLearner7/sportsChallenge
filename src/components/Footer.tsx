@@ -32,7 +32,7 @@ const Footer = () => {
               <Image src="/logo.png" alt="Logo" fill className="object-contain" sizes="32px" />
             </div>
             <span className="text-xl font-headline font-black italic tracking-tighter text-white/50 uppercase">
-              Mr. <span className="text-primary/70">Predicto</span>
+              Human <span className="text-primary/70">vs AI</span>
             </span>
           </div>
           <p className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-500 text-center md:text-left">
@@ -43,7 +43,7 @@ const Footer = () => {
         {/* Legal & Copyright */}
         <div className="flex flex-col gap-2 items-center md:items-end">
           <p className="text-xs font-medium text-slate-400 text-center md:text-right">
-            &copy; {currentYear} Mr. Predicto. All rights reserved.
+            &copy; {currentYear} Sports AI Challenge. All Rights Reserved.
           </p>
           <div className="flex gap-4 text-[9px] uppercase font-black tracking-widest cursor-pointer">
             <button onClick={() => setActiveModal('privacy')} className="text-primary/40 hover:text-primary transition-colors hover:underline underline-offset-4 decoration-primary/50">Privacy Protocol</button>

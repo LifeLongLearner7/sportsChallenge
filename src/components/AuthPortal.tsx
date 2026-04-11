@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { signIn, signUp } from "@/lib/auth-actions";
-import { ArrowRight, Lock, Mail, UserPlus, LogIn, ChevronRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Lock, Mail, UserPlus, LogIn, ChevronRight, AlertCircle, CheckCircle2, X } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -11,7 +11,18 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-function AuthForm({ mode, setMode, loading, setLoading }: any) {
+const PORTAL_PROTOCOLS = {
+  privacy: {
+    title: "PRIVACY PROTOCOL",
+    content: "We treat your tactical data with high-altitude 256-bit isolation. No Personally Identifiable Information (PII) is shared with Mr. Predicto's neural network. Your engagement metrics and prediction history are used strictly to recalibrate the Arena Meta and improve the Global Accuracy Index. All strategic dossiers are encrypted at rest."
+  },
+  terms: {
+    title: "TERMS OF ENGAGEMENT",
+    content: "By entering the Cyber-Sports arena, you acknowledge that all predictions and analysis are for strategic engagement and entertainment purposes only. Cyber-Sports is a non-monetary competition designed for master-strategists. We do not support gambling. Misuse of the arena protocols or attempting to inject unauthorized logic into the scoring engine will result in immediate disqualification of your strategist identity."
+  }
+};
+
+function AuthForm({ mode, setMode, loading, setLoading, setActivePortalModal }: any) {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const message = searchParams.get("message");
@@ -117,6 +128,25 @@ function AuthForm({ mode, setMode, loading, setLoading }: any) {
             <span className="bg-[#0a0e14] px-4">Encryption Layer: ACTIVE</span>
           </div>
         </div>
+
+        {/* Legal Links */}
+        <div className="flex gap-4 justify-center text-[9px] uppercase font-black tracking-widest">
+          <button
+            type="button"
+            onClick={() => setActivePortalModal('privacy')}
+            className="text-slate-600 hover:text-primary transition-colors hover:underline underline-offset-4 decoration-primary/50"
+          >
+            Privacy Protocol
+          </button>
+          <span className="text-slate-800">/</span>
+          <button
+            type="button"
+            onClick={() => setActivePortalModal('terms')}
+            className="text-slate-600 hover:text-primary transition-colors hover:underline underline-offset-4 decoration-primary/50"
+          >
+            Terms of Engagement
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -125,8 +155,10 @@ function AuthForm({ mode, setMode, loading, setLoading }: any) {
 export default function AuthPortal() {
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [loading, setLoading] = useState(false);
+  const [activePortalModal, setActivePortalModal] = useState<null | 'privacy' | 'terms'>(null);
 
   return (
+    <>
     <div id="auth" className="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl relative z-20 border-white/5 overflow-hidden group">
       {/* Decorative Aura */}
       <div className={cn(
@@ -135,8 +167,42 @@ export default function AuthPortal() {
       )}></div>
 
       <Suspense fallback={<div className="h-[400px] flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>}>
-        <AuthForm mode={mode} setMode={setMode} loading={loading} setLoading={setLoading} />
+        <AuthForm mode={mode} setMode={setMode} loading={loading} setLoading={setLoading} setActivePortalModal={setActivePortalModal} />
       </Suspense>
     </div>
+
+    {/* Legal Modal Overlay */}
+    {activePortalModal && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div
+          className="absolute inset-0 bg-black/60 backdrop-blur-md"
+          onClick={() => setActivePortalModal(null)}
+        />
+        <div className="relative w-full max-w-lg p-8 glass-panel border border-primary/30 rounded-2xl shadow-[0_0_50px_rgba(129,236,255,0.15)] flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex justify-between items-center pb-4 border-b border-white/10">
+            <h2 className="font-headline font-black text-xl italic tracking-tighter text-white">
+              SYSTEM <span className="text-primary">{PORTAL_PROTOCOLS[activePortalModal].title}</span>
+            </h2>
+            <button
+              onClick={() => setActivePortalModal(null)}
+              className="text-slate-500 hover:text-white transition-colors"
+              aria-label="Close modal"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <p className="text-slate-400 text-sm leading-relaxed font-medium uppercase tracking-tight">
+            {PORTAL_PROTOCOLS[activePortalModal].content}
+          </p>
+          <button
+            onClick={() => setActivePortalModal(null)}
+            className="mt-4 w-full py-3 bg-primary/10 border border-primary/30 text-primary font-black uppercase text-xs tracking-widest hover:bg-primary/20 transition-all rounded"
+          >
+            Protocol Acknowledged
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
