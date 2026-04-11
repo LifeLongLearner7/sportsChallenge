@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import Script from "next/script";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -30,6 +31,19 @@ export default function RootLayout({
       <body className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} font-body bg-background text-foreground antialiased min-h-screen overflow-x-hidden`}>
         {children}
         <Analytics />
+        {/* Google Analytics */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-QLR8PKQ8PZ"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-QLR8PKQ8PZ');
+          `}
+        </Script>
       </body>
     </html>
   );

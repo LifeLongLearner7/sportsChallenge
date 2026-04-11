@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import MatchCard from "./MatchCard";
 import { submitPrediction } from "@/lib/data-actions";
+import { trackPredictionSubmitted } from "@/lib/analytics";
 import { AVATARS, MR_PREDICTO_AVATAR } from "@/lib/constants";
 import Image from "next/image";
 import Link from "next/link";
@@ -58,6 +59,18 @@ export default function DashboardClient({
       setSavingMatchId(matchId);
       setPredictions((prev) => ({ ...prev, [matchId]: winner }));
       await submitPrediction(matchId, winner);
+
+      // Track the prediction event in GA (using screen_name, never PII)
+      const match = initialMatches.find((m) => m.id === matchId);
+      if (match) {
+        trackPredictionSubmitted({
+          screenName: profile?.screen_name || "Strategist",
+          matchId,
+          teamA: match.team_a,
+          teamB: match.team_b,
+          chosenTeam: winner,
+        });
+      }
     } catch (error) {
       console.error("Prediction failed:", error);
       // Revert optimism on failure
