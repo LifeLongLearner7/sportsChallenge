@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -28,6 +29,7 @@ export default function RootLayout({
     <html lang="en" className="dark" data-scroll-behavior="smooth">
       <body className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} font-body bg-background text-foreground antialiased min-h-screen overflow-x-hidden`}>
         {children}
+        <Analytics />
       </body>
     </html>
   );
