@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Zap, Bot } from "lucide-react";
 import { getLandingStats, getUserProfile } from "@/lib/data-actions";
 import { redirect } from "next/navigation";
+import SEOSchema from "@/components/SEOSchema";
 
 export default async function Home() {
   // FAST PATH: Get core landing stats and profile (highly cached)
@@ -22,6 +23,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[#050505] overflow-x-hidden flex flex-col">
+      <SEOSchema />
       {/* Centered Branding Header - Matches reference exactly */}
       <header className="w-full pt-16 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-1000">
         <div className="w-20 h-20 relative">

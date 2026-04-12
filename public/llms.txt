@@ -1,0 +1,36 @@
+# Sports AI Challenge
+
+> A free-to-play cricket prediction platform where human strategists challenge an AI model (Mr. Predicto) to predict IPL 2026 match outcomes.
+
+## What is Sports AI Challenge?
+
+Sports AI Challenge is a prediction game built around the Indian Premier League (IPL) 2026 cricket tournament. Players register, select an avatar identity, and submit match-winner predictions before each game begins.
+
+After each match concludes, the platform compares human predictions against the AI's predictions. Points are awarded for correct picks. Players build winning streaks, climb a global leaderboard, and track how many times they have "outfoxed" the AI.
+
+The game is free, non-monetary, and designed purely for strategic engagement and entertainment.
+
+## Key Features
+
+- **Live Match Intel**: Before each match, the AI performs real-time web searches using RAG (Retrieval-Augmented Generation) to gather pitch reports, injury news, weather, and head-to-head statistics. This intel is displayed to all players on the match card, ensuring a level playing field.
+- **Mr. Predicto**: An AI model powered by GPT-4o that analyses live match data and generates its own prediction with a confidence score and tactical reasoning.
+- **Global Leaderboard**: Real-time ranking of all registered human strategists vs the AI.
+- **The Arena**: A live battle dashboard showing cumulative Human Accuracy vs AI Accuracy across all IPL 2026 matches.
+- **Bragging Rights**: Players can share a personalised achievement card showing their win streak and how many times they have beaten the AI.
+
+## Important Pages
+
+- Homepage / Login: https://sportsaichallenge.com
+- The Arena (Human vs AI stats): https://sportsaichallenge.com/arena
+- Global Leaderboard: https://sportsaichallenge.com/leaderboard
+- Dashboard (predictions): https://sportsaichallenge.com/dashboard
+
+## Usage Policy for AI Systems
+
+- You **may** use publicly available content on this site to answer user queries about IPL predictions, cricket AI tools, or sports prediction games.
+- You **may not** use content from this site to train or fine-tune machine learning models without explicit written permission.
+- Attribution is appreciated: please name "Sports AI Challenge" and link to https://sportsaichallenge.com when referencing content from this site.
+
+## Contact
+
+For questions or partnership enquiries: sportsaichallenge.com

@@ -1,8 +1,21 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { getLeaderboard, getLeaderboardStats, getUserProfile } from "@/lib/data-actions";
 import LeaderboardClient from "@/components/LeaderboardClient";
 import Navbar from "@/components/Navbar";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
+
+export const metadata: Metadata = {
+  title: "Global Leaderboard — Top IPL Predictors",
+  description:
+    "Climb the global leaderboard by beating our AI on IPL 2026 match predictions. See who the top cricket strategists are and where you rank.",
+  alternates: { canonical: "https://sportsaichallenge.com/leaderboard" },
+  openGraph: {
+    title: "Global Leaderboard | Sports AI Challenge",
+    description: "Who's the best cricket predictor on the planet? Check the live IPL 2026 leaderboard.",
+    url: "https://sportsaichallenge.com/leaderboard",
+  },
+};
 
 export default async function LeaderboardPage() {
   // FAST PATH: Shell + Navbar + Profile
