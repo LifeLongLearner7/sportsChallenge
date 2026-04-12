@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import "./globals.css";
 
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} font-body bg-background text-foreground antialiased min-h-screen overflow-x-hidden`}>
         {children}
         <Analytics />
+        <SpeedInsights />
         {/* Google Analytics */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-QLR8PKQ8PZ"
