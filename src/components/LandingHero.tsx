@@ -112,7 +112,7 @@ export default function LandingHero({ stats }: LandingHeroProps) {
                     <li className="flex items-start gap-3 group/item">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 group-hover/item:scale-125 transition-transform" />
                       <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                        Email Command: <span className="text-primary cursor-pointer hover:underline">sportsaichallenge@gmail.com</span>
+                        Send Email to: <span className="text-primary cursor-pointer hover:underline">support@sportsaichallenge.com</span>
                       </span>
                     </li>
                   </ul>

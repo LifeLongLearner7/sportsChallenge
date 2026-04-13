@@ -13,7 +13,7 @@ export default async function TopPredictorStream() {
           <Trophy className="text-primary" size={28} />
         </div>
         <h3 className="font-headline font-black text-xl uppercase tracking-tighter italic text-white/40">
-          Neural <span className="text-primary/60">Operative</span>
+          Top <span className="text-primary/60">Predictor</span>
         </h3>
       </div>
 
