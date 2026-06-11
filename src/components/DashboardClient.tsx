@@ -31,9 +31,16 @@ interface DashboardClientProps {
   initialPredictions: Prediction[];
   profile: Profile | null;
   globalStats: {
-    userCount: number;
-    avgHumanAccuracy: number;
-    avgAiAccuracy: number;
+    football: {
+      userCount: number;
+      avgHumanAccuracy: number;
+      avgAiAccuracy: number;
+    };
+    cricket: {
+      userCount: number;
+      avgHumanAccuracy: number;
+      avgAiAccuracy: number;
+    };
   };
   totalUsers: number;
   rank: number;
@@ -48,6 +55,7 @@ export default function DashboardClient({
   rank
 }: DashboardClientProps) {
   const [savingMatchId, setSavingMatchId] = useState<string | null>(null);
+  const [activeSport, setActiveSport] = useState<'cricket' | 'football'>('football');
   const [predictions, setPredictions] = useState<Record<string, string>>(
     initialPredictions.reduce((acc, p) => ({ ...acc, [p.match_id]: p.prediction }), {})
   );
@@ -99,7 +107,11 @@ export default function DashboardClient({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const sortedMatches = [...initialMatches].sort((a, b) => 
+  const currentGlobalStats = globalStats[activeSport];
+
+  const filteredMatches = initialMatches.filter(m => (m.sport || "cricket") === activeSport);
+
+  const sortedMatches = [...filteredMatches].sort((a, b) => 
     new Date(a.match_time).getTime() - new Date(b.match_time).getTime()
   );
 
@@ -115,7 +127,7 @@ export default function DashboardClient({
     return matchDate.getTime() > today.getTime();
   }).slice(0, 3);
 
-  const humanLead = globalStats.avgHumanAccuracy - globalStats.avgAiAccuracy;
+  const humanLead = currentGlobalStats.avgHumanAccuracy - currentGlobalStats.avgAiAccuracy;
 
   return (
     <div className="min-h-screen bg-[#020205] text-slate-200 p-4 md:p-8 font-sans selection:bg-primary/30 pt-10">
@@ -198,20 +210,20 @@ export default function DashboardClient({
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center text-[9px] font-black tracking-widest uppercase">
                     <span className="text-slate-400">Human Sync</span>
-                    <span className="text-white">{globalStats.avgHumanAccuracy}%</span>
+                    <span className="text-white">{currentGlobalStats.avgHumanAccuracy}%</span>
                   </div>
                   <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary shadow-[0_0_8px_#81ecff]" style={{ width: `${globalStats.avgHumanAccuracy}%` }}></div>
+                    <div className="h-full bg-primary shadow-[0_0_8px_#81ecff]" style={{ width: `${currentGlobalStats.avgHumanAccuracy}%` }}></div>
                   </div>
                 </div>
                 
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center text-[9px] font-black tracking-widest uppercase">
                     <span className="text-secondary/70">Mr. Predicto</span>
-                    <span className="text-secondary">{globalStats.avgAiAccuracy}%</span>
+                    <span className="text-secondary">{currentGlobalStats.avgAiAccuracy}%</span>
                   </div>
                   <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-secondary shadow-[0_0_8px_#ff6b98]" style={{ width: `${globalStats.avgAiAccuracy}%` }}></div>
+                    <div className="h-full bg-secondary shadow-[0_0_8px_#ff6b98]" style={{ width: `${currentGlobalStats.avgAiAccuracy}%` }}></div>
                   </div>
                 </div>
               </div>
@@ -220,6 +232,32 @@ export default function DashboardClient({
 
           {/* Center Column: Match Feed */}
           <div className="lg:col-span-6 space-y-8">
+             {/* Tournament Selector Tabs */}
+             <div className="flex gap-4 border-b border-white/5 pb-6">
+               <button
+                 onClick={() => setActiveSport("football")}
+                 className={cn(
+                   "px-6 py-3 rounded-xl border text-xs font-mono uppercase tracking-widest transition-all",
+                   activeSport === "football"
+                     ? "bg-primary text-slate-950 border-primary shadow-[0_0_15px_rgba(129,236,255,0.2)]"
+                     : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10 hover:text-white"
+                 )}
+               >
+                 FIFA World Cup 2026
+               </button>
+               <button
+                 onClick={() => setActiveSport("cricket")}
+                 className={cn(
+                   "px-6 py-3 rounded-xl border text-xs font-mono uppercase tracking-widest transition-all",
+                   activeSport === "cricket"
+                     ? "bg-primary text-slate-950 border-primary shadow-[0_0_15px_rgba(129,236,255,0.2)]"
+                     : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10 hover:text-white"
+                 )}
+               >
+                 IPL 2026 (Cricket)
+               </button>
+             </div>
+
              <div className="flex flex-col gap-10">
                 {/* Today Section */}
                 <div className="space-y-6">

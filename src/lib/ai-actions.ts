@@ -16,6 +16,15 @@ import {
   fetchSeriesInfo, 
   TEAM_MAPPINGS 
 } from "./api-service";
+import {
+  fetchAllFifaFixtures,
+  fetchFifaFixtureById,
+  fetchRecentFifaResults,
+  determineFifaWinner,
+  FIFA_TEAM_MAPPINGS,
+  FIFA_LEAGUE_ID,
+  FIFA_SEASON,
+} from "./football-api-service";
 import { processAllPredictionsForMatch, logSystemActivity } from "./scoring";
 
 /**
@@ -102,6 +111,90 @@ export async function syncTournamentRegistry(seriesId: string = "87c62aac-bc3c-4
 }
 
 /**
+ * FIFA REGISTRY SYNC (v1.0)
+ * Links internal football matches to their official API-Football fixture IDs.
+ * Uses a clean-slate approach per tournament to prevent identity ghosting.
+ */
+export async function syncFifaRegistry() {
+  const supabase = await createServiceClient();
+  const FIFA_SERIES_KEY = `fifa_wc_${FIFA_SEASON}`;
+  console.log(`FIFA Sync: Resynchronizing FIFA World Cup ${FIFA_SEASON} Registry...`);
+
+  try {
+    // Step 0: Nuclear Reset for FIFA series
+    await supabase.from("external_fixtures").delete().eq("series_id", FIFA_SERIES_KEY);
+
+    // Step 1: Fetch all fixtures from API-Football
+    let externalFixtures = await fetchAllFifaFixtures();
+    if (!externalFixtures || externalFixtures.length === 0) {
+      throw new Error("No API fixtures returned from football-data.org. Registry sync aborted.");
+    }
+
+    // Step 2: Insert all external fixtures into the registry
+    for (const ef of externalFixtures) {
+      await supabase.from("external_fixtures").upsert({
+        external_id: String(ef.fixture.id),
+        series_id: FIFA_SERIES_KEY,
+        name: `${ef.teams.home.name} vs ${ef.teams.away.name}`,
+        date: ef.fixture.date,
+        status: ef.fixture.status.long,
+      }, { onConflict: 'external_id' });
+    }
+
+    // Step 3: Fetch all internal football matches
+    const { data: internalMatches } = await supabase
+      .from("matches")
+      .select("id, team_a, team_b, match_time")
+      .eq("sport", "football")
+      .order("match_time", { ascending: true });
+
+    if (!internalMatches) return { success: false, reason: "No internal football matches found." };
+
+    let linkedCount = 0;
+    const usedExternalIds = new Set<string>();
+
+    // Step 4: Greedy identity alignment
+    for (const match of internalMatches) {
+      const aliasesA = [match.team_a, ...(FIFA_TEAM_MAPPINGS[match.team_a] || [])].map((a) => a.toLowerCase());
+      const aliasesB = [match.team_b, ...(FIFA_TEAM_MAPPINGS[match.team_b] || [])].map((b) => b.toLowerCase());
+
+      const potentialMatches = externalFixtures.filter((ef) => {
+        if (usedExternalIds.has(String(ef.fixture.id))) return false;
+        const homeName = ef.teams.home.name.toLowerCase();
+        const awayName = ef.teams.away.name.toLowerCase();
+        const homeMatch = aliasesA.some((a) => homeName.includes(a) || a.includes(homeName)) ||
+                          aliasesB.some((b) => homeName.includes(b) || b.includes(homeName));
+        const awayMatch = aliasesA.some((a) => awayName.includes(a) || a.includes(awayName)) ||
+                          aliasesB.some((b) => awayName.includes(b) || b.includes(awayName));
+        return homeMatch && awayMatch;
+      });
+
+      if (potentialMatches.length > 0) {
+        // Pick closest by date
+        let best = potentialMatches[0];
+        let minDiff = Infinity;
+        for (const pm of potentialMatches) {
+          const diff = Math.abs(new Date(match.match_time).getTime() - new Date(pm.fixture.date).getTime());
+          if (diff < minDiff) { minDiff = diff; best = pm; }
+        }
+        await supabase.from("external_fixtures")
+          .update({ match_id: match.id })
+          .eq("external_id", String(best.fixture.id));
+        usedExternalIds.add(String(best.fixture.id));
+        linkedCount++;
+      }
+    }
+
+    await logSystemActivity('sync', 'success', `FIFA Registry Synchronized: ${linkedCount} matches linked.`);
+    revalidatePath("/admin/matches");
+    return { success: true, count: linkedCount };
+  } catch (error: any) {
+    console.error("FIFA Registry Sync Failure:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * NEURAL PRIMARY: Identifies the winner of a match using OpenAI's research pulse.
  * This is the high-fidelity failover for when traditional sports APIs rotate data.
  */
@@ -162,59 +255,21 @@ export async function generateMatchPrediction(match: Match) {
   if (process.env.TAVILY_API_KEY) {
     try {
       const tvly = tavily({ apiKey: process.env.TAVILY_API_KEY });
-      
-      const matchDateStr = new Date(match.match_time).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-      const venueStr = match.venue && match.venue !== "TBD" ? match.venue : "";
-      
-      // Strict parameterization to force the search engine to hone in on the exact fixture
-      const query = `IPL 2026 ${match.team_a} vs ${match.team_b} ${venueStr} ${matchDateStr} 
-      Provide structured pre-match data for IPL 2026 match: [${match.team_a} vs ${match.team_b}] on ${matchDateStr} at ${venueStr}.
-      Return in this format:
-      Pitch at ${venueStr}:
-      - type:
-      - avg_score:
-      - chasing_advantage:
+      const isFootball = match.sport === "football";
 
-      Venue (${venueStr}) Stats:
-      - last_matches_summary:
-      - batting_first_win_percent:
-      - chasing_win_percent:
+      const query = isFootball
+        ? `${match.team_a} vs ${match.team_b} FIFA World Cup 2026 preview form injuries head to head`
+        : `IPL 2026 ${match.team_a} vs ${match.team_b} ${match.venue || ""} preview pitch report key players news`;
 
-      Team Form:
-      - ${match.team_a}_last5:
-      - ${match.team_b}_last5:
-      - head_to_head:
+      console.log(`Strategic Pulse: LIVE RECON via Tavily for ${match.team_a} vs ${match.team_b}...`);
 
-      Key Players:
-      - key_batsmen:
-      - key_bowlers:
-
-      Probable XI:
-      - ${match.team_a}:
-      - ${match.team_b}:
-
-      Toss:
-      - preferred_decision:
-      - impact:
-
-      Weather at  ${venueStr} on ${matchDateStr}:
-      - condition:
-      - dew_factor:
-      - rain_probability:
-
-      Only include factual, recent, data-backed insights for IPL 2026 ${match.team_a} vs ${match.team_b} at  ${venueStr} on ${matchDateStr}
-      `;
-      
-      console.log(`Strategic Pulse: Initiating LIVE RECON via Tavily for ${match.team_a} vs ${match.team_b}...`);
-      
       const searchResponse = await tvly.search(query, {
         searchDepth: "basic",
         maxResults: 3,
         topic: "news",
-        include_answer: true,
-        days: 14 // Only pull articles from the last 14 days
+        days: 14,
       });
-      
+
       if (searchResponse.results && searchResponse.results.length > 0) {
         liveContext = searchResponse.results.map((r: any) => r.content).join("\n\n");
       }
@@ -223,28 +278,48 @@ export async function generateMatchPrediction(match: Match) {
     }
   }
 
-  const prompt = `
-    You are 'SPORTS-AI-CORE', a high-fidelity sports analysis AI designed for the IPL season. Expert at analyses based on team players, pitch and immediate performance. 
-    Task: Predict the winning likelihood and provide strategic reasoning for the following T20 fixture. 
-    
+  const isFootball = match.sport === "football";
+
+  const prompt = isFootball ? `
+    You are 'SPORTS-AI-CORE', a high-fidelity football analysis AI for FIFA World Cup ${new Date(match.match_time).getFullYear()}.
+    Task: Predict the most likely outcome for the following match.
+
+    Match: ${match.team_a} vs ${match.team_b}
+    Stage: ${(match as any).round || "Group Stage"}
+    Venue: ${match.venue || "TBD"}
+    Date: ${new Date(match.match_time).toLocaleDateString()}
+
+    LIVE INTEL:
+    ${liveContext}
+
+    Format Requirements:
+    - winner: Must be exactly "${match.team_a}", "${match.team_b}", or "draw"
+    - confidence: Integer between 50 and 99
+    - reasoning: Tactical insight based on form, history, tournament context (130-150 characters)
+    - match_intel: Structured synthesis: "Form: ...\\nH2H: ...\\nKey Players: ...\\nTactical Edge: ..."
+
+    Return ONLY raw JSON. No markdown.
+    Example: {"winner": "BRA", "confidence": 72, "reasoning": "Brazil's high press dominates in neutral venues; Argentina's midfield lacks depth without Enzo.", "match_intel": "Form: BRA W4D1 L0\\nH2H: BRA leads 10-6\\nKey Players: Vinicius Jr, Lautaro\\nTactical Edge: BRA press vs ARG slow build-up"}
+  ` : `
+    You are 'SPORTS-AI-CORE', a high-fidelity sports analysis AI for IPL cricket.
+    Task: Predict the winning likelihood and provide strategic reasoning for the following T20 fixture.
+
     Match Information:
     Teams: ${match.team_a} vs ${match.team_b}
     Venue: ${match.venue || "TBD"}
     Date: ${new Date(match.match_time).toLocaleDateString()}
-    
+
     LIVE INTEL (RECENT SEARCH RESULTS):
     ${liveContext}
 
-    Format output Requirements:
+    Format Requirements:
     - winner: Must be exactly ${match.team_a} or ${match.team_b}
     - confidence: An integer between 50 and 99
     - reasoning: A technical, data-driven strategic insight incorporating the live intel (Exactly 130-150 characters)
-    - match_intel: A heavily structured synthesis of the LIVE INTEL formatted exactly like this:
-        "Pitch Report: ...\nHead-to-Head: ...\nPreferred_decision on TOSS: ...\nTactical Edge: ..."
-        (If exact data isn't in the intel, make a strong analytical assumption to fill the gaps. Do not mention outdated years like 2024 or 2025).
-    
+    - match_intel: A structured synthesis: "Pitch Report: ...\\nHead-to-Head: ...\\nPreferred_decision on TOSS: ...\\nTactical Edge: ..."
+
     Return ONLY a raw JSON object. No markdown, no prose.
-    Example: {"winner": "RCB", "confidence": 78, "reasoning": "RCB's middle order stability on high scoring Bengaluru surfaces gives them a 14% higher operational efficiency than SRH's current pace attack.", "match_intel": "Pitch Report: Flat track, high scoring...\nHead-to-Head: RCB leads 14-10...\nPreferred_decision on TOSS: Batting first...\nTactical Edge: Spin vs pace at death"}
+    Example: {"winner": "RCB", "confidence": 78, "reasoning": "RCB's middle order stability on high scoring Bengaluru surfaces gives them a 14% higher operational efficiency than SRH's pace attack.", "match_intel": "Pitch Report: Flat track\\nHead-to-Head: RCB leads 14-10\\nPreferred_decision on TOSS: Bat first\\nTactical Edge: Spin vs pace at death"}
   `;
 
   try {
@@ -256,9 +331,8 @@ export async function generateMatchPrediction(match: Match) {
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
-    // Ensure fallback if match_intel wasn't generated
     if (!result.match_intel) {
-      result.match_intel = liveContext; 
+      result.match_intel = liveContext;
     }
     return result;
   } catch (err) {
@@ -266,6 +340,7 @@ export async function generateMatchPrediction(match: Match) {
     return null;
   }
 }
+
 
 /**
  * THE STATUS SYNC (01:00 AM IST)
@@ -445,7 +520,9 @@ export async function systemPredictionSync() {
          const teamB = match.team_b.toLowerCase().trim();
 
          let actualAiPick = null;
-         if (winner === "team_a" || winner === teamA) {
+         if (winner === "draw") {
+           actualAiPick = "draw";
+         } else if (winner === "team_a" || winner === teamA) {
            actualAiPick = match.team_a;
          } else if (winner === "team_b" || winner === teamB) {
            actualAiPick = match.team_b;
@@ -487,13 +564,182 @@ export async function systemPredictionSync() {
 }
 
 /**
+ * FIFA RESULT SYNC
+ * Processes completed FIFA matches and distributes points.
+ * Draw predictions ("draw") are worth 100 points.
+ */
+export async function systemFootballResultSync() {
+  const supabase = await createServiceClient();
+  const FIFA_SERIES_KEY = `fifa_wc_${FIFA_SEASON}`;
+  const now = new Date();
+  let resolvedCount = 0;
+
+  const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: pastMatches } = await supabase
+    .from("matches")
+    .select("*")
+    .eq("sport", "football")
+    .eq("status", "upcoming")
+    .lt("match_time", now.toISOString());
+
+  if (!pastMatches || pastMatches.length === 0) return { success: true, count: 0 };
+
+  for (const match of pastMatches) {
+    // Get external fixture ID
+    const { data: linkage } = await supabase
+      .from("external_fixtures")
+      .select("external_id")
+      .eq("match_id", match.id)
+      .single();
+
+    if (!linkage?.external_id) {
+      console.log(`FIFA Result: No linkage for ${match.team_a} vs ${match.team_b}. Triggering auto-repair...`);
+      await syncFifaRegistry();
+      continue;
+    }
+
+    const extId = Number(linkage.external_id);
+    let outcome: "team_a" | "team_b" | "draw" | null = null;
+
+    const fixture = await fetchFifaFixtureById(extId);
+    if (!fixture) continue;
+    outcome = determineFifaWinner(fixture, match.team_a, match.team_b);
+
+    if (!outcome) continue; // Match not finished yet
+
+    // Determine actual winner name for DB storage
+    const actualWinnerName = outcome === "draw" ? "draw" : (outcome === "team_a" ? match.team_a : match.team_b);
+
+    // Process all predictions with draw-aware scoring
+    await processAllPredictionsForMatch(match.id, actualWinnerName, match.ai_prediction);
+    await supabase.from("matches")
+      .update({ winner: actualWinnerName, status: "completed" })
+      .eq("id", match.id);
+
+    await logSystemActivity('result', 'success', `FIFA: ${match.team_a} vs ${match.team_b} resolved — ${actualWinnerName}.`);
+    resolvedCount++;
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/leaderboard");
+  return { success: true, count: resolvedCount };
+}
+
+/**
  * Combined Sync (for manual administration)
  */
 export async function systemAutomatedSync() {
   await systemStatusSync(); // 01:00 AM Logic
-  await systemResultSync(); // 02:00 AM Logic
+  await systemResultSync(); // 02:00 AM Logic (Cricket)
+  await systemFootballResultSync(); // 02:00 AM Logic (Football)
   await systemPredictionSync(); // 03:00 AM Logic
   return { success: true, mode: "full_sync" };
 }
+
+/**
+ * FIFA MATCH SEEDER (v1.0)
+ * Fetches all World Cup 2026 fixtures from API-Football and seeds the 'matches' table.
+ */
+export async function seedFifaMatches() {
+  const supabase = await createServiceClient();
+  console.log("FIFA Seeder: Initiating World Cup 2026 fixture seed...");
+
+  try {
+    let fixtures = await fetchAllFifaFixtures();
+    if (!fixtures || fixtures.length === 0) {
+      throw new Error("No API fixtures returned from football-data.org. Seeding aborted.");
+    }
+
+    let seededCount = 0;
+
+    const getTeamCode = (name: string): string => {
+      const nameLower = name.toLowerCase();
+      for (const [code, aliases] of Object.entries(FIFA_TEAM_MAPPINGS)) {
+        if (aliases.some(alias => {
+          const aliasLower = alias.toLowerCase();
+          return nameLower.includes(aliasLower) || aliasLower.includes(nameLower);
+        })) {
+          return code;
+        }
+      }
+      return name.slice(0, 3).toUpperCase();
+    };
+
+    for (const f of fixtures) {
+      const teamACode = getTeamCode(f.teams.home.name);
+      const teamBCode = getTeamCode(f.teams.away.name);
+      const matchTime = f.fixture.date;
+      const venue = `${f.fixture.venue.name}, ${f.fixture.venue.city}`;
+      const round = f.league.round;
+
+      const { data: existing } = await supabase
+        .from("matches")
+        .select("id")
+        .eq("sport", "football")
+        .eq("tournament", "fifa_wc_2026")
+        .eq("team_a", teamACode)
+        .eq("team_b", teamBCode)
+        .eq("match_time", matchTime)
+        .maybeSingle();
+
+      let matchId: string;
+
+      if (existing) {
+        matchId = existing.id;
+        await supabase
+          .from("matches")
+          .update({
+            venue,
+            round,
+          })
+          .eq("id", matchId);
+      } else {
+        const { data: inserted, error: insertError } = await supabase
+          .from("matches")
+          .insert({
+            sport: "football",
+            tournament: "fifa_wc_2026",
+            team_a: teamACode,
+            team_b: teamBCode,
+            match_time: matchTime,
+            venue,
+            round,
+            status: "upcoming"
+          })
+          .select("id")
+          .single();
+
+        if (insertError || !inserted) {
+          console.error("FIFA Seeder: Failed to insert match:", insertError);
+          continue;
+        }
+        matchId = inserted.id;
+        seededCount++;
+      }
+
+      const FIFA_SERIES_KEY = `fifa_wc_${FIFA_SEASON}`;
+      await supabase
+        .from("external_fixtures")
+        .upsert({
+          match_id: matchId,
+          external_id: String(f.fixture.id),
+          series_id: FIFA_SERIES_KEY,
+          name: `${f.teams.home.name} vs ${f.teams.away.name}`,
+          date: matchTime,
+          status: f.fixture.status.long,
+        }, { onConflict: "external_id" });
+    }
+
+    revalidatePath("/admin/matches");
+    revalidatePath("/dashboard");
+    revalidatePath("/arena");
+    return { success: true, count: seededCount };
+  } catch (err: any) {
+    console.error("FIFA Seeder Failure:", err);
+    return { success: false, error: err.message };
+  }
+}
+
 
 

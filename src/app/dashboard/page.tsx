@@ -20,10 +20,11 @@ export default async function DashboardPage() {
 
 async function DashboardDataWrapper({ profile }: { profile: any }) {
   // STREAMING PATH: Fetch tactical data in parallel
-  const [matches, predictions, globalStats, totalUsers] = await Promise.all([
+  const [matches, predictions, footballStats, cricketStats, totalUsers] = await Promise.all([
     getMatches(),
     getUserPredictions(),
-    getGlobalStats(),
+    getGlobalStats("football"),
+    getGlobalStats("cricket"),
     getTotalStrategists(),
   ]);
 
@@ -35,7 +36,7 @@ async function DashboardDataWrapper({ profile }: { profile: any }) {
       initialMatches={matches} 
       initialPredictions={predictions} 
       profile={profile} 
-      globalStats={globalStats}
+      globalStats={{ football: footballStats, cricket: cricketStats }}
       totalUsers={totalUsers}
       rank={rank}
     />

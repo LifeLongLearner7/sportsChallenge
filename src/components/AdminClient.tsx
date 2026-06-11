@@ -17,13 +17,15 @@ import {
   TrendingUp,
   ChevronRight,
   Trash2,
-  User
+  User,
+  Link2,
+  Trophy
 } from "lucide-react";
-import { systemAutomatedSync } from "@/lib/ai-actions";
+import { systemAutomatedSync, syncFifaRegistry } from "@/lib/ai-actions";
 import { adminSignUp } from "@/lib/auth-actions";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { manualPurgeMessages, triggerCachePurge } from "@/lib/data-actions";
+import { manualPurgeMessages, triggerCachePurge, triggerFifaSeed } from "@/lib/data-actions";
 
 interface AdminClientProps {
   profile: Profile | null;
@@ -48,6 +50,8 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
 
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncingFifa, setIsSyncingFifa] = useState(false);
+  const [isSeedingFifa, setIsSeedingFifa] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
@@ -118,6 +122,40 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
       addLog("Critical Failure: Neural Link severed. Check API logs.", "err");
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleFifaSync = async () => {
+    try {
+      setIsSyncingFifa(true);
+      addLog("FIFA REGISTRY SYNC: Connecting to API-Football...", "info");
+      const result = await syncFifaRegistry();
+      if (result.success) {
+        addLog(`FIFA SYNC COMPLETE: ${result.count} matches linked to external fixtures.`, "success");
+      } else {
+        addLog(`FIFA SYNC NOTICE: ${(result as any).reason || "No fixtures found — tournament may not be live yet."}`, "info");
+      }
+    } catch (err) {
+      addLog("FIFA SYNC FAILURE: API-Football connection severed.", "err");
+    } finally {
+      setIsSyncingFifa(false);
+    }
+  };
+
+  const handleFifaSeed = async () => {
+    try {
+      setIsSeedingFifa(true);
+      addLog("FIFA SEEDER: Querying API-Football and seeding database...", "info");
+      const result = await triggerFifaSeed();
+      if (result.success) {
+        addLog(`FIFA SEED COMPLETE: Successfully seeded/updated ${result.count} matches in tactical grid.`, "success");
+      } else {
+        addLog(`FIFA SEED FAILURE: ${result.error}`, "err");
+      }
+    } catch (err) {
+      addLog("FIFA SEED FAILURE: Database insertion aborted.", "err");
+    } finally {
+      setIsSeedingFifa(false);
     }
   };
 
@@ -284,6 +322,48 @@ export default function AdminClient({ profile, analytics, completedMatches = [],
                     </p>
                  </div>
               </div>
+
+           {/* FIFA WC 2026 Panel */}
+           <div className="glass-panel p-8 rounded-2xl border-white/5 bg-gradient-to-br from-blue-500/5 to-transparent relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-2xl transition-all group-hover:bg-blue-500/10"></div>
+              <h3 className="text-xs font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                <Trophy size={14} className="text-blue-400" /> FIFA World Cup 2026
+              </h3>
+              
+               <div className="flex flex-col gap-4">
+                 <button 
+                   onClick={handleFifaSeed}
+                   disabled={isSeedingFifa || isSyncingFifa}
+                   className={cn(
+                     "w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black uppercase text-xs tracking-widest transition-all border",
+                     isSeedingFifa 
+                       ? "bg-white/5 text-slate-500 cursor-not-allowed border-white/5" 
+                       : "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 text-blue-400 active:scale-95"
+                   )}
+                 >
+                    {isSeedingFifa ? <RefreshCcw className="animate-spin" size={16} /> : <Database size={16} />}
+                    {isSeedingFifa ? "Seeding Matches..." : "Seed FIFA Matches"}
+                 </button>
+
+                 <button 
+                   onClick={handleFifaSync}
+                   disabled={isSeedingFifa || isSyncingFifa}
+                   className={cn(
+                     "w-full py-4 rounded-xl flex items-center justify-center gap-3 font-black uppercase text-xs tracking-widest transition-all border",
+                     isSyncingFifa 
+                       ? "bg-white/5 text-slate-500 cursor-not-allowed border-white/5" 
+                       : "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 text-blue-400 active:scale-95"
+                   )}
+                 >
+                    {isSyncingFifa ? <RefreshCcw className="animate-spin" size={16} /> : <Link2 size={16} />}
+                    {isSyncingFifa ? "Syncing Registry..." : "Sync FIFA Registry"}
+                 </button>
+                 
+                 <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter leading-relaxed">
+                   Seeds upcoming World Cup 2026 fixtures from API-Football and surgical-links them.
+                 </p>
+              </div>
+           </div>
 
               {/* Maintenance Controls */}
               <div className="glass-panel p-8 rounded-2xl border-white/5 bg-black/40">

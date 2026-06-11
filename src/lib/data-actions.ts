@@ -128,58 +128,61 @@ export async function getUserProfile() {
  *
  * NOW: One cached function, one DB scan, two derived shape-exports.
  */
-export const getPlatformStats = unstable_cache(
-  async () => {
-    // 🚀 THE SCALING WIN: O(1) Fetch from global_stats table
-    try {
-      const { data: stats, error } = await staticSupabase
-        .from("global_stats")
-        .select("*")
-        .eq("sport", "cricket")
-        .maybeSingle();
+export async function getPlatformStats(sport = "football") {
+  const fetcher = unstable_cache(
+    async () => {
+      // 🚀 THE SCALING WIN: O(1) Fetch from global_stats table
+      try {
+        const { data: stats, error } = await staticSupabase
+          .from("global_stats")
+          .select("*")
+          .eq("sport", sport)
+          .maybeSingle();
 
-      if (error || !stats || stats.total_users === 0) {
-        throw new Error(error?.message || "Stats zero or missing");
+        if (error || !stats || stats.total_users === 0) {
+          throw new Error(error?.message || "Stats zero or missing");
+        }
+
+        const dominance = stats.human_accuracy - 50;
+
+        return {
+          userCount: stats.total_users,
+          avgHumanAccuracy: stats.human_accuracy,
+          avgAiAccuracy: stats.ai_accuracy,
+          activeNodes: stats.total_users.toLocaleString(),
+          meanAccuracy: stats.human_accuracy.toFixed(1) + "%",
+          dominance: (dominance > 0 ? "+" : "") + dominance.toFixed(1) + "%",
+        };
+      } catch (err) {
+        console.warn("Stats Fallback Active:", err);
+        
+        const { data: profiles } = await staticSupabase.from("profiles").select("accuracy, points");
+        const { count: totalCount } = await staticSupabase.from("profiles").select("*", { count: 'exact', head: true });
+
+        const safeProfiles = profiles || [];
+        const safeCount = totalCount || 0;
+        
+        const avgAccuracy = safeProfiles.length
+          ? safeProfiles.reduce((acc: number, p: any) => acc + (p.accuracy || 0), 0) / safeProfiles.length
+          : 0;
+        
+        const dominance = avgAccuracy - 50;
+
+        return {
+          userCount: safeCount,
+          avgHumanAccuracy: Math.round(avgAccuracy * 10) / 10,
+          avgAiAccuracy: 72.5,
+          activeNodes: safeCount.toLocaleString(),
+          meanAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1) + "%",
+          dominance: (dominance > 0 ? "+" : "") + (Math.round(dominance * 10) / 10).toFixed(1) + "%",
+        };
       }
-
-      const dominance = stats.human_accuracy - 50;
-
-      return {
-        userCount: stats.total_users,
-        avgHumanAccuracy: stats.human_accuracy,
-        avgAiAccuracy: stats.ai_accuracy,
-        activeNodes: stats.total_users.toLocaleString(),
-        meanAccuracy: stats.human_accuracy.toFixed(1) + "%",
-        dominance: (dominance > 0 ? "+" : "") + dominance.toFixed(1) + "%",
-      };
-    } catch (err) {
-      console.warn("Stats Fallback Active:", err);
-      
-      const { data: profiles } = await staticSupabase.from("profiles").select("accuracy, points");
-      const { count: totalCount } = await staticSupabase.from("profiles").select("*", { count: 'exact', head: true });
-
-      const safeProfiles = profiles || [];
-      const safeCount = totalCount || 0;
-      
-      const avgAccuracy = safeProfiles.length
-        ? safeProfiles.reduce((acc: number, p: any) => acc + (p.accuracy || 0), 0) / safeProfiles.length
-        : 0;
-      
-      const dominance = avgAccuracy - 50;
-
-      return {
-        userCount: safeCount,
-        avgHumanAccuracy: Math.round(avgAccuracy * 10) / 10,
-        avgAiAccuracy: 72.5,
-        activeNodes: safeCount.toLocaleString(),
-        meanAccuracy: (Math.round(avgAccuracy * 10) / 10).toFixed(1) + "%",
-        dominance: (dominance > 0 ? "+" : "") + (Math.round(dominance * 10) / 10).toFixed(1) + "%",
-      };
-    }
-  },
-  ["platform-stats"],
-  { revalidate: 1800, tags: ["platform-stats"] }
-);
+    },
+    [`platform-stats-${sport}`],
+    { revalidate: 1800, tags: [`platform-stats-${sport}`, "platform-stats"] }
+  );
+  return fetcher();
+};
 
 /** Backwards-compatible: Leaderboard page expects this shape */
 export const getLeaderboardStats = async () => {
@@ -191,9 +194,8 @@ export const getLeaderboardStats = async () => {
   };
 };
 
-/** Backwards-compatible: Dashboard page expects this shape */
-export const getGlobalStats = async () => {
-  const stats = await getPlatformStats();
+export const getGlobalStats = async (sport = "football") => {
+  const stats = await getPlatformStats(sport);
   return {
     userCount: stats.userCount,
     avgHumanAccuracy: stats.avgHumanAccuracy,
@@ -309,36 +311,39 @@ export async function updateProfile(updates: Partial<Profile>) {
 
 
 
-export const getLandingStats = unstable_cache(
-  async () => {
-    // 🔥 PARALLELIZED HIGH-VELOCITY FETCH
-    const [statsResult, topUserResult] = await Promise.all([
-      staticSupabase.from("global_stats").select("*").eq("sport", "cricket").maybeSingle(),
-      staticSupabase.from("profiles").select("screen_name, accuracy").eq("is_ai", false).order("points", { ascending: false }).limit(1).maybeSingle()
-    ]);
+export async function getLandingStats(sport = "football") {
+  const fetcher = unstable_cache(
+    async () => {
+      // 🔥 PARALLELIZED HIGH-VELOCITY FETCH
+      const [statsResult, topUserResult] = await Promise.all([
+        staticSupabase.from("global_stats").select("*").eq("sport", sport).maybeSingle(),
+        staticSupabase.from("profiles").select("screen_name, accuracy").eq("is_ai", false).order("points", { ascending: false }).limit(1).maybeSingle()
+      ]);
 
-    const stats = statsResult.data;
-    const topUser = topUserResult.data;
+      const stats = statsResult.data;
+      const topUser = topUserResult.data;
 
-    if (!stats) {
+      if (!stats) {
+        return {
+          humanScore: "0",
+          aiScore: "0",
+          globalAccuracy: "0.0",
+          topPredictor: topUser || { screen_name: "STRIKER_X", accuracy: 89.4 }
+        };
+      }
+
       return {
-        humanScore: "0",
-        aiScore: "0",
-        globalAccuracy: "0.0",
+        humanScore: stats.human_points_total.toLocaleString(),
+        aiScore: stats.ai_points_total.toLocaleString(),
+        globalAccuracy: stats.human_accuracy.toFixed(1),
         topPredictor: topUser || { screen_name: "STRIKER_X", accuracy: 89.4 }
       };
-    }
-
-    return {
-      humanScore: stats.human_points_total.toLocaleString(),
-      aiScore: stats.ai_points_total.toLocaleString(),
-      globalAccuracy: stats.human_accuracy.toFixed(1),
-      topPredictor: topUser || { screen_name: "STRIKER_X", accuracy: 89.4 }
-    };
-  },
-  ["landing-stats"],
-  { revalidate: 1800 }
-);
+    },
+    [`landing-stats-${sport}`],
+    { revalidate: 1800 }
+  );
+  return fetcher();
+};
 
 
 /**
@@ -419,8 +424,11 @@ export const getCompletedMatches = unstable_cache(
 );
 
 export async function getArenaStats() {
-  const stats = await getGlobalStats();
-  return stats;
+  const [football, cricket] = await Promise.all([
+    getGlobalStats("football"),
+    getGlobalStats("cricket")
+  ]);
+  return { football, cricket };
 }
 
 // Tactical Comm-Link (Discussion) Actions
@@ -568,7 +576,7 @@ export async function getAdminAnalytics() {
   return { dailyVolume, sentiment };
 }
 
-export async function updateMatchWinner(matchId: string, winnerKey: "team_a" | "team_b") {
+export async function updateMatchWinner(matchId: string, winnerKey: "team_a" | "team_b" | "draw") {
   await requireAdmin();
   const supabase = await createClient();
   
@@ -581,8 +589,8 @@ export async function updateMatchWinner(matchId: string, winnerKey: "team_a" | "
 
   if (fetchError || !match) throw new Error("Match not found");
 
-  // Resolve actual name (e.g., 'RCB' instead of 'team_a')
-  const actualWinnerName = winnerKey === "team_a" ? match.team_a : match.team_b;
+  // Resolve actual name
+  const actualWinnerName = winnerKey === "draw" ? "draw" : (winnerKey === "team_a" ? match.team_a : match.team_b);
 
   // 2. Update Match
   const { error: updateError } = await supabase
@@ -780,4 +788,11 @@ export async function getUserBraggingStats(userId: string) {
 
   return fetcher();
 }
+
+export async function triggerFifaSeed() {
+  await requireAdmin();
+  const { seedFifaMatches } = await import("./ai-actions");
+  return await seedFifaMatches();
+}
+
 

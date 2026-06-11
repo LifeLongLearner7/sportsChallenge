@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Calendar, MapPin, Trophy, Bot } from "lucide-react";
 import { Match } from "@/types";
-import { TEAM_LOGOS, MR_PREDICTO_AVATAR } from "@/lib/constants";
+import { TEAM_LOGOS, FIFA_TEAM_LOGOS, MR_PREDICTO_AVATAR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 interface MatchCardProps {
@@ -20,7 +20,9 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isLocked, setIsLocked] = useState(false);
   const [isIntelExpanded, setIsIntelExpanded] = useState(false);
+  const isFootball = match.sport === "football";
   const isUpcoming = match.status === "upcoming" || match.status === "active";
+  const teamLogos = isFootball ? FIFA_TEAM_LOGOS : TEAM_LOGOS;
   const hasPredicted = !!userPrediction;
 
   useEffect(() => {
@@ -30,7 +32,8 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
       const now = new Date();
       const matchTime = new Date(match.match_time);
       const diff = matchTime.getTime() - now.getTime();
-      const lockoutThreshold = 60 * 60 * 1000; // 1 hour
+      // Football: lock at kick-off (0 mins). Cricket: lock 1 hour before.
+      const lockoutThreshold = isFootball ? 0 : 60 * 60 * 1000;
 
       if (diff <= lockoutThreshold) {
         setIsLocked(true);
@@ -51,7 +54,7 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [match.match_time]);
+  }, [match.match_time, isFootball]);
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden transition-all hover:border-primary/30 group">
@@ -63,6 +66,11 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
             {formattedDate || "..."}
           </div>
           <div className="flex items-center gap-2">
+            {isFootball && (match as any).round && (
+              <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[8px] font-black rounded-full uppercase tracking-widest">
+                {(match as any).round}
+              </span>
+            )}
             <MapPin size={12} className="text-secondary" />
             {match.venue}
           </div>
@@ -73,14 +81,14 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
           <div className="flex flex-col items-center gap-3 flex-1 text-center">
             <div className={cn(
               "w-16 h-16 rounded-full border border-white/5 flex items-center justify-center hex-clip overflow-hidden shadow-xl transition-all group-hover:border-primary/50 relative",
-              !TEAM_LOGOS[match.team_a] && "bg-surface-container-highest"
+              !teamLogos[match.team_a] && "bg-surface-container-highest"
             )}>
-               {TEAM_LOGOS[match.team_a] ? (
-                 <Image src={TEAM_LOGOS[match.team_a]} fill sizes="64px" className="object-cover" alt={match.team_a} />
+               {teamLogos[match.team_a] ? (
+                 <Image src={teamLogos[match.team_a]} fill sizes="64px" className="object-cover" alt={match.team_a} />
                ) : (
                  <span className="text-xl font-black text-white">{match.team_a[0]}</span>
                )}
-               {TEAM_LOGOS[match.team_a] && <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>}
+               {teamLogos[match.team_a] && <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>}
             </div>
             <span className="font-headline font-bold text-sm uppercase tracking-tighter text-white/90">{match.team_a}</span>
           </div>
@@ -100,14 +108,14 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
           <div className="flex flex-col items-center gap-3 flex-1 text-center">
             <div className={cn(
               "w-16 h-16 rounded-full border border-white/5 flex items-center justify-center hex-clip overflow-hidden shadow-xl transition-all group-hover:border-primary/50 relative",
-              !TEAM_LOGOS[match.team_b] && "bg-surface-container-highest"
+              !teamLogos[match.team_b] && "bg-surface-container-highest"
             )}>
-               {TEAM_LOGOS[match.team_b] ? (
-                 <Image src={TEAM_LOGOS[match.team_b]} fill sizes="64px" className="object-cover" alt={match.team_b} />
+               {teamLogos[match.team_b] ? (
+                 <Image src={teamLogos[match.team_b]} fill sizes="64px" className="object-cover" alt={match.team_b} />
                ) : (
                  <span className="text-xl font-black text-white">{match.team_b[0]}</span>
                )}
-               {TEAM_LOGOS[match.team_b] && <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>}
+               {teamLogos[match.team_b] && <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>}
             </div>
             <span className="font-headline font-bold text-sm uppercase tracking-tighter text-white/90">{match.team_b}</span>
           </div>
@@ -161,14 +169,24 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
                     onClick={() => onPredict(match.id, match.team_a)}
                     className="flex-1 py-3 bg-surface-container-high border border-primary/20 hover:border-primary text-xs font-bold uppercase tracking-widest rounded-md transition-all active:scale-95 disabled:opacity-50"
                   >
-                    {isSaving ? "SAVING..." : match.team_a}
+                    {isSaving ? "..." : match.team_a}
                   </button>
+                  {/* Draw option — only for football */}
+                  {isFootball && (
+                    <button
+                      disabled={isSaving}
+                      onClick={() => onPredict(match.id, "draw")}
+                      className="px-4 py-3 bg-amber-500/10 border border-amber-500/30 hover:border-amber-400 text-amber-400 text-xs font-black uppercase tracking-widest rounded-md transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {isSaving ? "..." : "Draw"}
+                    </button>
+                  )}
                   <button 
                     disabled={isSaving}
                     onClick={() => onPredict(match.id, match.team_b)}
                     className="flex-1 py-3 bg-surface-container-high border border-primary/20 hover:border-primary text-xs font-bold uppercase tracking-widest rounded-md transition-all active:scale-95 disabled:opacity-50"
                   >
-                    {isSaving ? "SAVING..." : match.team_b}
+                    {isSaving ? "..." : match.team_b}
                   </button>
                 </div>
               )}

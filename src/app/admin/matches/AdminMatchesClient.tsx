@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useTransition, useCallback } from "react";
+import Image from "next/image";
+import { TEAM_LOGOS, FIFA_TEAM_LOGOS } from "@/lib/constants";
 import { 
   updateMatchWinner, 
   triggerManualSync, 
@@ -41,6 +43,7 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
   const [showAuditConfirm, setShowAuditConfirm] = useState(false);
   const [abandonConfirmId, setAbandonConfirmId] = useState<string | null>(null);
   const [conflictReport, setConflictReport] = useState<{ unlinked: any[], conflicts: any[], mapped: number } | null>(null);
+  const [activeSport, setActiveSport] = useState<'cricket' | 'football'>('football');
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -108,7 +111,7 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
     }
   }, [router]);
 
-  const handleUpdateWinner = async (matchId: string, winnerKey: "team_a" | "team_b") => {
+  const handleUpdateWinner = async (matchId: string, winnerKey: "team_a" | "team_b" | "draw") => {
     setStatusMessage({ text: "Processing Tactical Resolution...", type: "info" });
     startTransition(async () => {
       try {
@@ -177,10 +180,13 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
     }
   };
 
-  const upcomingMatches = matches.filter(m => m.status !== "completed");
-  const completedMatches = matches
+  const filteredMatches = matches.filter(m => (m.sport || "cricket") === activeSport);
+  const upcomingMatches = filteredMatches.filter(m => m.status !== "completed");
+  const completedMatches = filteredMatches
     .filter(m => m.status === "completed")
     .sort((a, b) => new Date(b.match_time).getTime() - new Date(a.match_time).getTime());
+
+  const cn = (...classes: any[]) => classes.filter(Boolean).join(" ");
 
   return (
     <div className="min-h-screen bg-[#050505] text-white p-8 font-sans selection:bg-purple-500/30">
@@ -282,6 +288,32 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
       </div>
     </header>
 
+      {/* Sport Selector HUD Tabs */}
+      <div className="max-w-7xl mx-auto mb-8 flex gap-4">
+        <button
+          onClick={() => setActiveSport("football")}
+          className={cn(
+            "px-6 py-3 rounded-xl border text-xs font-mono uppercase tracking-widest transition-all",
+            activeSport === "football"
+              ? "bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+              : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          FIFA World Cup 2026
+        </button>
+        <button
+          onClick={() => setActiveSport("cricket")}
+          className={cn(
+            "px-6 py-3 rounded-xl border text-xs font-mono uppercase tracking-widest transition-all",
+            activeSport === "cricket"
+              ? "bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+              : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          IPL 2026 (Cricket)
+        </button>
+      </div>
+
 
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -323,18 +355,45 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
 
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-8">
-                      <div className="text-right">
-                        <p className="text-sm font-bold tracking-tight">{match.team_a}</p>
-                        <p className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Host Team</p>
+                      {/* Host Team */}
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-8 h-8 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0">
+                          {(match.sport === "football" ? FIFA_TEAM_LOGOS : TEAM_LOGOS)[match.team_a] ? (
+                            <Image src={(match.sport === "football" ? FIFA_TEAM_LOGOS : TEAM_LOGOS)[match.team_a]} fill sizes="32px" className="object-cover" alt={match.team_a} />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-white/40">
+                              {match.team_a.slice(0, 2)}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold tracking-tight">{match.team_a}</p>
+                          <p className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Host Team</p>
+                        </div>
                       </div>
+
+                      {/* VS Divider */}
                       <div className="flex flex-col items-center gap-1">
                         <div className="w-8 h-[1px] bg-white/10" />
                         <span className="text-[10px] font-mono text-white/20 uppercase tracking-[0.2em]">VS</span>
                         <div className="w-8 h-[1px] bg-white/10" />
                       </div>
-                      <div>
-                        <p className="text-sm font-bold tracking-tight">{match.team_b}</p>
-                        <p className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Opponent</p>
+
+                      {/* Opponent Team */}
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <p className="text-sm font-bold tracking-tight text-right">{match.team_b}</p>
+                          <p className="text-[10px] text-white/30 font-mono uppercase tracking-widest text-right">Opponent</p>
+                        </div>
+                        <div className="relative w-8 h-8 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0">
+                          {(match.sport === "football" ? FIFA_TEAM_LOGOS : TEAM_LOGOS)[match.team_b] ? (
+                            <Image src={(match.sport === "football" ? FIFA_TEAM_LOGOS : TEAM_LOGOS)[match.team_b]} fill sizes="32px" className="object-cover" alt={match.team_b} />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-white/40">
+                              {match.team_b.slice(0, 2)}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -375,7 +434,7 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
                     </div>
                   ) : (
                     <>
-                      <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div className={cn("grid gap-3 mt-4", activeSport === "football" ? "grid-cols-3" : "grid-cols-2")}>
                         <button 
                           onClick={() => handleUpdateWinner(match.id, "team_a")}
                           disabled={isPending || syncing}
@@ -383,6 +442,15 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
                         >
                           Set {match.team_a} Winner
                         </button>
+                        {activeSport === "football" && (
+                          <button 
+                            onClick={() => handleUpdateWinner(match.id, "draw")}
+                            disabled={isPending || syncing}
+                            className="py-3 px-4 rounded-xl border border-amber-500/10 bg-amber-500/5 hover:bg-amber-500/20 text-[10px] font-black text-amber-400 tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            Set Draw
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleUpdateWinner(match.id, "team_b")}
                           disabled={isPending || syncing}
@@ -475,7 +543,25 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
               {completedMatches.map(match => (
                 <div key={match.id} className="p-4 bg-white/5 border border-white/5 rounded-xl flex flex-col gap-3 group/archive transition-all">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-tight">{match.team_a} vs {match.team_b}</p>
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-4 h-4 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0">
+                        {(match.sport === "football" ? FIFA_TEAM_LOGOS : TEAM_LOGOS)[match.team_a] ? (
+                          <Image src={(match.sport === "football" ? FIFA_TEAM_LOGOS : TEAM_LOGOS)[match.team_a]} fill sizes="16px" className="object-cover" alt={match.team_a} />
+                        ) : (
+                          <span className="text-[8px] font-bold text-white/40 flex items-center justify-center h-full w-full">{match.team_a[0]}</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-tight">{match.team_a}</span>
+                      <span className="text-[9px] font-mono text-white/20 uppercase tracking-[0.2em]">vs</span>
+                      <span className="text-[10px] font-bold uppercase tracking-tight">{match.team_b}</span>
+                      <div className="relative w-4 h-4 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0">
+                        {(match.sport === "football" ? FIFA_TEAM_LOGOS : TEAM_LOGOS)[match.team_b] ? (
+                          <Image src={(match.sport === "football" ? FIFA_TEAM_LOGOS : TEAM_LOGOS)[match.team_b]} fill sizes="16px" className="object-cover" alt={match.team_b} />
+                        ) : (
+                          <span className="text-[8px] font-bold text-white/40 flex items-center justify-center h-full w-full">{match.team_b[0]}</span>
+                        )}
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[8px] font-mono text-white/30 uppercase">Winner:</span>
                       <span className="text-[9px] font-black uppercase text-emerald-400">
@@ -526,7 +612,7 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
                   </div>
                   
                   {/* Recalculate Buttons for Admin Override */}
-                  <div className="grid grid-cols-2 gap-2 border-t border-white/5 pt-3">
+                  <div className={cn("grid gap-2 border-t border-white/5 pt-3", activeSport === "football" ? "grid-cols-3" : "grid-cols-2")}>
                     <button 
                       onClick={() => handleUpdateWinner(match.id, "team_a")}
                       disabled={isPending || syncing}
@@ -534,6 +620,15 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
                     >
                       Override: {match.team_a}
                     </button>
+                    {activeSport === "football" && (
+                      <button 
+                        onClick={() => handleUpdateWinner(match.id, "draw")}
+                        disabled={isPending || syncing}
+                        className="py-2 px-3 rounded-lg border border-amber-500/10 bg-amber-500/5 hover:bg-amber-500/20 text-[8px] text-amber-400 font-black tracking-widest uppercase transition-all disabled:opacity-50"
+                      >
+                        Override: Draw
+                      </button>
+                    )}
                     <button 
                       onClick={() => handleUpdateWinner(match.id, "team_b")}
                       disabled={isPending || syncing}

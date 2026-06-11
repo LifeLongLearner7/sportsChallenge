@@ -24,9 +24,16 @@ interface ArenaClientProps {
   initialMatches: Match[];
   initialMessages: any[];
   initialStats: {
-    userCount: number;
-    avgHumanAccuracy: number;
-    avgAiAccuracy: number;
+    football: {
+      userCount: number;
+      avgHumanAccuracy: number;
+      avgAiAccuracy: number;
+    };
+    cricket: {
+      userCount: number;
+      avgHumanAccuracy: number;
+      avgAiAccuracy: number;
+    };
   };
 }
 
@@ -36,6 +43,7 @@ export default function ArenaClient({
   initialMessages, 
   initialStats 
 }: ArenaClientProps) {
+  const [activeSport, setActiveSport] = useState<'cricket' | 'football'>('football');
   const [messages, setMessages] = useState(initialMessages);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -110,7 +118,9 @@ export default function ArenaClient({
     }
   };
 
-  const humanLead = initialStats.avgHumanAccuracy - initialStats.avgAiAccuracy;
+  const currentStats = initialStats[activeSport] || initialStats.football;
+  const humanLead = currentStats.avgHumanAccuracy - currentStats.avgAiAccuracy;
+  const filteredMatches = initialMatches.filter(m => (m.sport || "cricket") === activeSport);
 
   return (
     <main className="min-h-screen bg-background pt-32 pb-12 px-6">
@@ -134,6 +144,32 @@ export default function ArenaClient({
              </p>
           </div>
 
+          {/* Tournament Selector HUD Tabs */}
+          <div className="flex gap-4 border-b border-white/5 pb-6">
+            <button
+              onClick={() => setActiveSport("football")}
+              className={cn(
+                "px-6 py-3 rounded-xl border text-xs font-mono uppercase tracking-widest transition-all",
+                activeSport === "football"
+                  ? "bg-primary text-slate-950 border-primary shadow-[0_0_15px_rgba(129,236,255,0.2)]"
+                  : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10 hover:text-white"
+              )}
+            >
+              FIFA World Cup 2026
+            </button>
+            <button
+              onClick={() => setActiveSport("cricket")}
+              className={cn(
+                "px-6 py-3 rounded-xl border text-xs font-mono uppercase tracking-widest transition-all",
+                activeSport === "cricket"
+                  ? "bg-primary text-slate-950 border-primary shadow-[0_0_15px_rgba(129,236,255,0.2)]"
+                  : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10 hover:text-white"
+              )}
+            >
+              IPL 2026 (Cricket)
+            </button>
+          </div>
+
           {/* Conflict Gauge */}
           <div className="glass-panel p-10 rounded-2xl relative group border-white/5 bg-gradient-to-br from-secondary/5 to-primary/5 mb-10 overflow-hidden">
              <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 blur-3xl -mr-32 -mt-32"></div>
@@ -151,19 +187,19 @@ export default function ArenaClient({
                       <div className="space-y-2">
                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest leading-none">
                             <span className="text-slate-400">Strategist Consensus</span>
-                            <span className="text-white">{initialStats.avgHumanAccuracy}%</span>
+                            <span className="text-white">{currentStats.avgHumanAccuracy}%</span>
                          </div>
                          <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-primary shadow-[0_0_12px_#81ecff]" style={{ width: `${initialStats.avgHumanAccuracy}%` }}></div>
+                            <div className="h-full bg-primary shadow-[0_0_12px_#81ecff]" style={{ width: `${currentStats.avgHumanAccuracy}%` }}></div>
                          </div>
                       </div>
                       <div className="space-y-2">
                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest leading-none">
                             <span className="text-secondary/70">Mr. Predicto</span>
-                            <span className="text-secondary">{initialStats.avgAiAccuracy}%</span>
+                            <span className="text-secondary">{currentStats.avgAiAccuracy}%</span>
                          </div>
                          <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-secondary shadow-[0_0_12px_#ff6b98]" style={{ width: `${initialStats.avgAiAccuracy}%` }}></div>
+                            <div className="h-full bg-secondary shadow-[0_0_12px_#ff6b98]" style={{ width: `${currentStats.avgAiAccuracy}%` }}></div>
                          </div>
                       </div>
                    </div>
@@ -202,8 +238,8 @@ export default function ArenaClient({
                <Sword size={14} className="text-white" /> Combat Logs
              </h3>
              <div className="grid gap-4">
-                {initialMatches.length > 0 ? (
-                  initialMatches.map(match => {
+                {filteredMatches.length > 0 ? (
+                  filteredMatches.map(match => {
                     const aiWinner = match.ai_prediction === match.winner;
                     return (
                       <div key={match.id} className="glass-panel p-5 rounded-xl border-white/5 flex items-center justify-between group hover:border-white/10 transition-all">
@@ -225,7 +261,7 @@ export default function ArenaClient({
 
                                  <div className="flex items-center gap-1.5">
                                     <div className="w-2 h-2 rounded-full bg-primary/50"></div>
-                                    <span className="text-[8px] font-black text-slate-400 uppercase">Con: {initialStats.avgHumanAccuracy}% Human Avg</span>
+                                    <span className="text-[8px] font-black text-slate-400 uppercase">Con: {currentStats.avgHumanAccuracy}% Human Avg</span>
                                  </div>
                               </div>
                            </div>

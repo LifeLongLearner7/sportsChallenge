@@ -76,6 +76,13 @@ export const processAllPredictionsForMatch = async (
 ) => {
   const supabase = await createServiceClient();
 
+  const { data: match } = await supabase
+    .from("matches")
+    .select("sport")
+    .eq("id", matchId)
+    .single();
+  const matchSport = match?.sport || "cricket";
+
   // ── Step 1: Fetch ALL predictions for this match in ONE query ─────────────
   const { data: predictions, error: fetchError } = await supabase
     .from("predictions")
@@ -200,12 +207,12 @@ export const processAllPredictionsForMatch = async (
   if (allProfiles) {
     const totalUsers = allProfiles.length;
     const avgAccuracy = allProfiles.reduce((acc, p) => acc + (p.accuracy || 0), 0) / (totalUsers || 1);
-    const humanPointsTotal = allProfiles.reduce((acc, p) => acc + (p.points || 0), 0);
     
-    // AI accuracy = actual win rate, not self-reported confidence
+    // AI accuracy = actual win rate, not self-reported confidence, filtered by sport
     const { data: resolvedMatches } = await supabase
       .from("matches")
       .select("ai_prediction, winner")
+      .eq("sport", matchSport)
       .not("winner", "is", null);
     const aiCorrect = resolvedMatches?.filter(m => m.ai_prediction === m.winner).length || 0;
     const aiAccuracy = resolvedMatches?.length
@@ -213,19 +220,28 @@ export const processAllPredictionsForMatch = async (
       : 0;
     const totalMatchesCount = resolvedMatches?.length || 0;
 
-    // Get Mr. Predicto's actual scored points
-    const { data: aiProfile } = await supabase
-      .from("profiles")
-      .select("points")
-      .eq("id", AI_USER_ID_STATS)
-      .single();
+    // Get Mr. Predicto's actual scored points for this sport
+    const { data: aiPredictions } = await supabase
+      .from("predictions")
+      .select("points_won, matches!inner(sport)")
+      .eq("user_id", AI_USER_ID_STATS)
+      .eq("matches.sport", matchSport);
+    const aiPointsTotal = aiPredictions?.reduce((acc, p) => acc + (p.points_won || 0), 0) || 0;
+
+    // Get total human points for this sport
+    const { data: humanPredictions } = await supabase
+      .from("predictions")
+      .select("points_won, matches!inner(sport)")
+      .neq("user_id", AI_USER_ID_STATS)
+      .eq("matches.sport", matchSport);
+    const humanPointsTotal = humanPredictions?.reduce((acc, p) => acc + (p.points_won || 0), 0) || 0;
 
     await supabase.from("global_stats").upsert({
-      sport: 'cricket',
+      sport: matchSport,
       human_accuracy: Math.round(avgAccuracy * 10) / 10,
       ai_accuracy: Math.round(aiAccuracy * 10) / 10,
       human_points_total: humanPointsTotal,
-      ai_points_total: aiProfile?.points || 0,
+      ai_points_total: aiPointsTotal,
       total_matches: totalMatchesCount,
       total_users: totalUsers,
       last_updated: new Date().toISOString()
