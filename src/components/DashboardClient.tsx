@@ -116,15 +116,44 @@ export default function DashboardClient({
   );
 
   const todayMatches = sortedMatches.filter(match => {
-    const matchDate = new Date(match.match_time);
-    matchDate.setHours(0, 0, 0, 0);
-    return matchDate.getTime() === today.getTime();
+    const isFootball = match.sport === "football";
+    if (isFootball) {
+      const matchTime = new Date(match.match_time).getTime();
+      const now = new Date().getTime();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      // Open if match starts within the next 24 hours, or if it is scheduled for today (includes active/live/completed)
+      const isWithin24Hours = (matchTime - now <= oneDayMs) && (matchTime - now > 0);
+      
+      const matchDate = new Date(match.match_time);
+      matchDate.setHours(0, 0, 0, 0);
+      const isScheduledToday = matchDate.getTime() === today.getTime();
+      
+      return isWithin24Hours || isScheduledToday;
+    } else {
+      const matchDate = new Date(match.match_time);
+      matchDate.setHours(0, 0, 0, 0);
+      return matchDate.getTime() === today.getTime();
+    }
   });
 
   const futureMatches = sortedMatches.filter(match => {
-    const matchDate = new Date(match.match_time);
-    matchDate.setHours(0, 0, 0, 0);
-    return matchDate.getTime() > today.getTime();
+    const isFootball = match.sport === "football";
+    if (isFootball) {
+      const matchTime = new Date(match.match_time).getTime();
+      const now = new Date().getTime();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      
+      const matchDate = new Date(match.match_time);
+      matchDate.setHours(0, 0, 0, 0);
+      const isScheduledToday = matchDate.getTime() === today.getTime();
+      
+      // More than 24 hours away AND not scheduled for today (avoids overlaps)
+      return (matchTime - now > oneDayMs) && !isScheduledToday;
+    } else {
+      const matchDate = new Date(match.match_time);
+      matchDate.setHours(0, 0, 0, 0);
+      return matchDate.getTime() > today.getTime();
+    }
   }).slice(0, 3);
 
   const humanLead = currentGlobalStats.avgHumanAccuracy - currentGlobalStats.avgAiAccuracy;
@@ -265,7 +294,7 @@ export default function DashboardClient({
                     <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent via-primary/30 to-primary/10"></div>
                     <h2 className="text-[11px] font-black text-white uppercase tracking-[0.4em] whitespace-nowrap flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                      Active Epochs: Today
+                      Active Epochs: {activeSport === "football" ? "Open" : "Today"}
                     </h2>
                     <div className="h-[2px] flex-1 bg-gradient-to-l from-transparent via-primary/30 to-primary/10"></div>
                   </div>
@@ -283,7 +312,9 @@ export default function DashboardClient({
                       ))
                     ) : (
                       <div className="p-12 text-center glass-panel border-dashed border-white/10 rounded-2xl opacity-50">
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">No Active Epochs Today</p>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                          No Active Epochs {activeSport === "football" ? "Open" : "Today"}
+                        </p>
                       </div>
                     )}
                   </div>
