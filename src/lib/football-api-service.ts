@@ -78,6 +78,12 @@ export const FIFA_TEAM_MAPPINGS: Record<string, string[]> = {
   "RSA": ["South Africa", "RSA", "ZAF", "SOU"],
   "BIH": ["Bosnia and Herzegovina", "Bosnia", "BIH", "BOS"],
   "ITA": ["Italy", "Italia", "ITA"],
+  "CPV": ["Cape Verde", "Cape Verde Islands", "CPV", "CAP"],
+  "CUW": ["Curaçao", "Curacao", "CUW", "CUR"],
+  "HTI": ["Haiti", "HTI", "HAI"],
+  "IRQ": ["Iraq", "IRQ", "IRA"],
+  "JOR": ["Jordan", "JOR"],
+  "UZB": ["Uzbekistan", "UZB"],
 };
 
 // ── INTERFACES ─────────────────────────────────────────────────────────────────
@@ -164,9 +170,9 @@ function mapToFootballFixture(fdMatch: any): FootballFixture {
   }
 
   // Get venue name/city
-  const venueParts = (fdMatch.venue || "").split(",");
+  const venueParts = fdMatch.venue ? fdMatch.venue.split(",") : [];
   const venueName = venueParts[0]?.trim() || "TBD";
-  const venueCity = venueParts[1]?.trim() || "TBD";
+  const venueCity = venueParts[1]?.trim() || "";
 
   // Map stage/round
   let round = fdMatch.stage || "Group Stage";

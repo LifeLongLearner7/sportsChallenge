@@ -670,7 +670,7 @@ export async function seedFifaMatches() {
       const teamACode = getTeamCode(f.teams.home.name);
       const teamBCode = getTeamCode(f.teams.away.name);
       const matchTime = f.fixture.date;
-      const venue = `${f.fixture.venue.name}, ${f.fixture.venue.city}`;
+      const venue = f.fixture.venue.city ? `${f.fixture.venue.name}, ${f.fixture.venue.city}` : f.fixture.venue.name;
       const round = f.league.round;
 
       const { data: existing } = await supabase

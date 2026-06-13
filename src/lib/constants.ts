@@ -131,6 +131,16 @@ export const FIFA_TEAM_LOGOS: Record<string, string> = {
   "BUL": "https://flagcdn.com/w160/bg.png",
   "NIR": "https://flagcdn.com/w160/gb-nir.png",
   "ISR": "https://flagcdn.com/w160/il.png",
+  "CAP": "https://flagcdn.com/w160/cv.png",
+  "CPV": "https://flagcdn.com/w160/cv.png",
+  "CUR": "https://flagcdn.com/w160/cw.png",
+  "CUW": "https://flagcdn.com/w160/cw.png",
+  "HAI": "https://flagcdn.com/w160/ht.png",
+  "HTI": "https://flagcdn.com/w160/ht.png",
+  "IRA": "https://flagcdn.com/w160/iq.png",
+  "IRQ": "https://flagcdn.com/w160/iq.png",
+  "JOR": "https://flagcdn.com/w160/jo.png",
+  "UZB": "https://flagcdn.com/w160/uz.png",
 };
 
 export const ALL_IDENTITIES = [...AVATARS, ...FACTIONS, MR_PREDICTO_AVATAR];
