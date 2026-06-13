@@ -44,6 +44,42 @@ export interface Prediction {
 }
 
 
+export interface Group {
+  id: string;
+  name: string;
+  invite_code: string;
+  created_by: string;
+  created_at: string;
+  description?: string;
+  member_count?: number;
+}
+
+export interface GroupMember {
+  id: string;
+  group_id: string;
+  user_id: string;
+  joined_at: string;
+  profile?: Profile;
+}
+
+/**
+ * A group member row merged with their group-specific scoring stats.
+ * Points/accuracy here are group-local (start at 0 on join), NOT global profile points.
+ */
+export interface GroupMemberWithProfile {
+  user_id: string;
+  group_id: string;
+  joined_at: string;
+  points: number;
+  matches_predicted: number;
+  accuracy: number;
+  role: "creator" | "admin" | "member";
+  // Merged from profiles table
+  screen_name?: string;
+  avatar_url?: string;
+  is_ai?: boolean;
+}
+
 export interface Profile {
   id: string;
   screen_name?: string;

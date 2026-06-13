@@ -178,6 +178,64 @@ export const processAllPredictionsForMatch = async (
         .eq("id", userId);
     }));
 
+  // ── Step 5B: Update Group-Specific Points ────────────────────────────────
+  // For every user who predicted on this match, find which groups they belong to
+  // and re-aggregate their group-local prediction history (predictions made AFTER
+  // they joined the group). Group points start at 0 and are fully independent of
+  // global profile points.
+  try {
+    // Fetch all group memberships for users who predicted on this match
+    const { data: groupMemberships } = await supabase
+      .from("group_members")
+      .select("group_id, user_id, joined_at")
+      .in("user_id", uniqueUserIds);
+
+    if (groupMemberships && groupMemberships.length > 0) {
+      // For each (user, group) pair, recalculate group-local stats
+      await Promise.all(
+        groupMemberships.map(async (membership: any) => {
+          // Fetch all SCORED predictions this user made for matches
+          // that started after they joined this group
+          const { data: groupPredictions } = await supabase
+            .from("predictions")
+            .select("points_won, created_at")
+            .eq("user_id", membership.user_id)
+            .not("points_won", "is", null)
+            .gte("created_at", membership.joined_at);
+
+          if (!groupPredictions) return;
+
+          const totalPredicted = groupPredictions.length;
+          const totalCorrect = groupPredictions.filter(
+            (p: any) => (p.points_won || 0) > 0
+          ).length;
+          const totalPoints = groupPredictions.reduce(
+            (sum: number, p: any) => sum + (p.points_won || 0),
+            0
+          );
+          const newAccuracy =
+            totalPredicted > 0
+              ? Math.round((totalCorrect / totalPredicted) * 1000) / 10
+              : 0;
+
+          await supabase
+            .from("group_members")
+            .update({
+              points: totalPoints,
+              matches_predicted: totalPredicted,
+              accuracy: newAccuracy,
+            })
+            .eq("group_id", membership.group_id)
+            .eq("user_id", membership.user_id);
+        })
+      );
+      console.log(`Scoring: Group points updated for ${groupMemberships.length} memberships.`);
+    }
+  } catch (groupErr) {
+    // Non-fatal: group scoring failure should not block global scoring
+    console.error("Scoring: Group points update failed (non-fatal):", groupErr);
+  }
+
   // ── Step 6: Calculate and store "Outfoxed" count ─────────────────────────
   // A strategist "outfoxes" the AI if AI was WRONG and they were RIGHT.
   const isAiWrong = aiWinner?.toLowerCase() !== actualWinner.toLowerCase();

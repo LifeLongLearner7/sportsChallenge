@@ -401,9 +401,9 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
                       <p className="text-sm font-mono text-white/60">
                         {new Date(match.match_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </p>
-                      <p className="text-[10px] text-emerald-400 font-mono uppercase tracking-widest flex items-center justify-end gap-1">
-                        <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
-                        Status: Upcoming
+                      <p className={cn("text-[10px] font-mono uppercase tracking-widest flex items-center justify-end gap-1", match.status === 'active' ? 'text-primary' : 'text-emerald-400')}>
+                        <span className={cn("w-1 h-1 rounded-full animate-pulse", match.status === 'active' ? 'bg-primary' : 'bg-emerald-400')} />
+                        Status: {match.status}
                       </p>
                     </div>
                   </div>
@@ -567,9 +567,11 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
                       <span className="text-[9px] font-black uppercase text-emerald-400">
                         {match.winner === match.team_a || match.winner === match.team_b 
                           ? match.winner 
-                          : match.winner === "abandoned" 
-                            ? "ABANDONED/DRAW" 
-                            : "UNKNOWN"}
+                          : match.winner === "draw" 
+                            ? "DRAW"
+                            : match.winner === "abandoned" 
+                              ? "ABANDONED/DRAW" 
+                              : "UNKNOWN"}
                       </span>
                       <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                     </div>

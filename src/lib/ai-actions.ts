@@ -580,7 +580,7 @@ export async function systemFootballResultSync() {
     .from("matches")
     .select("*")
     .eq("sport", "football")
-    .eq("status", "upcoming")
+    .neq("status", "completed")
     .lt("match_time", now.toISOString());
 
   if (!pastMatches || pastMatches.length === 0) return { success: true, count: 0 };

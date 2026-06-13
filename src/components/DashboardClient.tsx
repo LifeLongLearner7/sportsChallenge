@@ -109,7 +109,7 @@ export default function DashboardClient({
 
   const currentGlobalStats = globalStats[activeSport];
 
-  const filteredMatches = initialMatches.filter(m => (m.sport || "cricket") === activeSport);
+  const filteredMatches = initialMatches.filter(m => (m.sport || "cricket") === activeSport && m.status !== "completed");
 
   const sortedMatches = [...filteredMatches].sort((a, b) => 
     new Date(a.match_time).getTime() - new Date(b.match_time).getTime()

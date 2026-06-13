@@ -1,4 +1,4 @@
-import { systemResultSync } from "@/lib/ai-actions";
+import { systemResultSync, systemFootballResultSync } from "@/lib/ai-actions";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -10,6 +10,7 @@ export async function GET(request: Request) {
   try {
     console.log("Vercel Cron: Initiating 02:00 AM Match Result Pulse...");
     const result = await systemResultSync();
+    await systemFootballResultSync();
     
     return NextResponse.json({ 
       success: true, 

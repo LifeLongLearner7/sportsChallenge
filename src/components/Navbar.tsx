@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Trophy, LayoutDashboard, Sword, User, Bell, Wallet, Shield, LogOut, Menu, X } from "lucide-react";
+import { Trophy, LayoutDashboard, Sword, User, Bell, Wallet, Shield, LogOut, Menu, X, Users, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-actions";
 import { Profile } from "@/types";
@@ -14,6 +14,8 @@ const navItems = [
   { name: "Matches", href: "/dashboard", icon: LayoutDashboard },
   { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { name: "Arena", href: "/arena", icon: Sword },
+  { name: "Groups", href: "/groups", icon: Users },
+  { name: "Rules", href: "/rules", icon: BookOpen },
   { name: "Profile", href: "/profile", icon: User },
 ];
 
