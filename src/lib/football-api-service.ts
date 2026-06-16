@@ -349,8 +349,13 @@ function matchTeamToSide(
   const aliasesA = [teamA, ...(FIFA_TEAM_MAPPINGS[teamA] || [])].map((a) => a.toLowerCase());
   const aliasesB = [teamB, ...(FIFA_TEAM_MAPPINGS[teamB] || [])].map((b) => b.toLowerCase());
 
-  if (aliasesA.some((a) => apiName.includes(a) || a.includes(apiName))) return "team_a";
-  if (aliasesB.some((b) => apiName.includes(b) || b.includes(apiName))) return "team_b";
+  const checkMatch = (aliases: string[]) => aliases.some(a => {
+    if (a.length <= 3) return apiName === a;
+    return apiName === a || apiName.includes(a) || a.includes(apiName);
+  });
+
+  if (checkMatch(aliasesA)) return "team_a";
+  if (checkMatch(aliasesB)) return "team_b";
 
   return null;
 }

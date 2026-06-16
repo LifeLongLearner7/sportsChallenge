@@ -654,11 +654,16 @@ export async function seedFifaMatches() {
     let seededCount = 0;
 
     const getTeamCode = (name: string): string => {
-      const nameLower = name.toLowerCase();
+      const nameLower = name.trim().toLowerCase();
       for (const [code, aliases] of Object.entries(FIFA_TEAM_MAPPINGS)) {
         if (aliases.some(alias => {
           const aliasLower = alias.toLowerCase();
-          return nameLower.includes(aliasLower) || aliasLower.includes(nameLower);
+          // If the alias is exactly 3 letters (like GER, AUS), require an exact match.
+          // Otherwise, allow exact match or a generous includes (e.g., "United States of America" includes "United States").
+          if (aliasLower.length <= 3) {
+            return nameLower === aliasLower;
+          }
+          return nameLower === aliasLower || nameLower.includes(aliasLower) || aliasLower.includes(nameLower);
         })) {
           return code;
         }
