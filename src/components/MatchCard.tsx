@@ -6,6 +6,7 @@ import { Calendar, MapPin, Trophy, Bot } from "lucide-react";
 import { Match } from "@/types";
 import { TEAM_LOGOS, FIFA_TEAM_LOGOS, MR_PREDICTO_AVATAR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import TeamProfileModal from "@/components/TeamProfileModal";
 
 interface MatchCardProps {
   match: Match;
@@ -20,6 +21,7 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isLocked, setIsLocked] = useState(false);
   const [isIntelExpanded, setIsIntelExpanded] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const isFootball = match.sport === "football";
   const isUpcoming = match.status === "upcoming" || match.status === "active";
   const teamLogos = isFootball ? FIFA_TEAM_LOGOS : TEAM_LOGOS;
@@ -57,6 +59,7 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
   }, [match.match_time, isFootball]);
 
   return (
+    <>
     <div className="glass-panel rounded-2xl overflow-hidden transition-all hover:border-primary/30 group">
       <div className={cn("p-6 flex flex-col gap-6", isSaving && "opacity-50 pointer-events-none")}>
         {/* Match Header */}
@@ -79,16 +82,26 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
         {/* Teams Section */}
          <div className="flex justify-between items-center gap-4">
           <div className="flex flex-col items-center gap-3 flex-1 text-center">
-            <div className={cn(
-              "w-16 h-16 rounded-full border border-white/5 flex items-center justify-center hex-clip overflow-hidden shadow-xl transition-all group-hover:border-primary/50 relative",
-              !teamLogos[match.team_a] && "bg-surface-container-highest"
-            )}>
+            <div
+              className={cn(
+                "w-16 h-16 rounded-full border border-white/5 flex items-center justify-center hex-clip overflow-hidden shadow-xl transition-all group-hover:border-primary/50 relative",
+                !teamLogos[match.team_a] && "bg-surface-container-highest",
+                isFootball && "cursor-pointer hover:ring-2 hover:ring-primary/40 hover:scale-105"
+              )}
+              onClick={isFootball ? () => setSelectedTeam(match.team_a) : undefined}
+              title={isFootball ? `View ${match.team_a} profile` : undefined}
+            >
                {teamLogos[match.team_a] ? (
                  <Image src={teamLogos[match.team_a]} fill sizes="64px" className="object-cover" alt={match.team_a} />
                ) : (
                  <span className="text-xl font-black text-white">{match.team_a[0]}</span>
                )}
                {teamLogos[match.team_a] && <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>}
+               {isFootball && (
+                 <div className="absolute inset-0 bg-primary/0 hover:bg-primary/10 transition-colors flex items-end justify-center pb-1 pointer-events-none">
+                   <span className="text-[7px] font-black text-primary/0 group-hover:text-primary/60 uppercase tracking-widest transition-colors">INFO</span>
+                 </div>
+               )}
             </div>
             <span className="font-headline font-bold text-sm uppercase tracking-tighter text-white/90">{match.team_a}</span>
           </div>
@@ -106,16 +119,26 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
           </div>
 
           <div className="flex flex-col items-center gap-3 flex-1 text-center">
-            <div className={cn(
-              "w-16 h-16 rounded-full border border-white/5 flex items-center justify-center hex-clip overflow-hidden shadow-xl transition-all group-hover:border-primary/50 relative",
-              !teamLogos[match.team_b] && "bg-surface-container-highest"
-            )}>
+            <div
+              className={cn(
+                "w-16 h-16 rounded-full border border-white/5 flex items-center justify-center hex-clip overflow-hidden shadow-xl transition-all group-hover:border-primary/50 relative",
+                !teamLogos[match.team_b] && "bg-surface-container-highest",
+                isFootball && "cursor-pointer hover:ring-2 hover:ring-primary/40 hover:scale-105"
+              )}
+              onClick={isFootball ? () => setSelectedTeam(match.team_b) : undefined}
+              title={isFootball ? `View ${match.team_b} profile` : undefined}
+            >
                {teamLogos[match.team_b] ? (
                  <Image src={teamLogos[match.team_b]} fill sizes="64px" className="object-cover" alt={match.team_b} />
                ) : (
                  <span className="text-xl font-black text-white">{match.team_b[0]}</span>
                )}
                {teamLogos[match.team_b] && <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>}
+               {isFootball && (
+                 <div className="absolute inset-0 bg-primary/0 hover:bg-primary/10 transition-colors flex items-end justify-center pb-1 pointer-events-none">
+                   <span className="text-[7px] font-black text-primary/0 group-hover:text-primary/60 uppercase tracking-widest transition-colors">INFO</span>
+                 </div>
+               )}
             </div>
             <span className="font-headline font-bold text-sm uppercase tracking-tighter text-white/90">{match.team_b}</span>
           </div>
@@ -255,5 +278,15 @@ export default function MatchCard({ match, onPredict, userPrediction, isFuture, 
         </div>
       </div>
     </div>
+
+    {/* Team Profile Modal — football only */}
+    {isFootball && (
+      <TeamProfileModal
+        teamCode={selectedTeam}
+        onClose={() => setSelectedTeam(null)}
+      />
+    )}
+  </>
   );
 }
+
