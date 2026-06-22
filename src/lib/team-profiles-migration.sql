@@ -25,8 +25,9 @@ create policy "Team profiles are publicly readable"
 -- Only service role can write
 create policy "Only service role can insert team profiles"
   on team_profiles for insert
-  using (true);
+  with check (true);
 
 create policy "Only service role can update team profiles"
   on team_profiles for update
-  using (true);
+  using (true)
+  with check (true);
