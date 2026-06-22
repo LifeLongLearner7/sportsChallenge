@@ -51,3 +51,6 @@ seed_full_ipl_2026.mjs
 # custom: AI assistant metadata
 /.agents/
 skills-lock.json
+
+# dev log file
+dev.log
