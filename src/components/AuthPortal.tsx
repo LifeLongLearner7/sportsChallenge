@@ -140,8 +140,15 @@ function AuthForm({
   setActivePortalModal: (m: null | "privacy" | "terms") => void;
 }) {
   const searchParams = useSearchParams();
-  const error = searchParams.get("error");
-  const message = searchParams.get("message");
+  const urlError = searchParams.get("error");
+  const urlMessage = searchParams.get("message");
+
+  const [formError, setFormError] = useState<string | null>(urlError);
+  const [formMessage, setFormMessage] = useState<string | null>(urlMessage);
+
+  // Sync state if URL changes (e.g. initial load)
+  if (urlError && formError === null && formMessage === null) setFormError(urlError);
+  if (urlMessage && formMessage === null && formError === null) setFormMessage(urlMessage);
 
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -156,8 +163,36 @@ function AuthForm({
     setMode(mode === "signIn" ? "signUp" : "signIn");
     setPassword("");
     setTermsAccepted(false);
+    setFormError(null);
+    setFormMessage(null);
     // Clear URL signals on mode switch
     window.history.replaceState({}, "", "/");
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setFormError(null);
+    setFormMessage(null);
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    try {
+      const res = isSignUp ? await signUp(formData) : await signIn(formData);
+      if (res?.error) {
+        setFormError(res.error);
+      } else if (res?.message) {
+        setFormMessage(res.message);
+      }
+      // If it successfully redirected, Next.js throws NEXT_REDIRECT which is caught below
+    } catch (err: any) {
+      if (err?.digest?.startsWith("NEXT_REDIRECT")) {
+        // Redirecting, don't show error
+      } else {
+        setFormError("An unexpected error occurred. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -180,31 +215,30 @@ function AuthForm({
       </div>
 
       {/* Tactical Alerts */}
-      {(error || message) && (
+      {(formError || formMessage) && (
         <div
           className={cn(
             "p-3 rounded border text-xs font-bold uppercase tracking-wider flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300",
-            error
+            formError
               ? "bg-red-500/10 border-red-500/50 text-red-400"
               : "bg-primary/10 border-primary/50 text-primary"
           )}
         >
-          {error ? (
+          {formError ? (
             <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
           ) : (
             <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5" />
           )}
           <span className="flex-1 normal-case tracking-normal leading-relaxed font-semibold">
-            {error === "Code_Exchange_Failed"
+            {formError === "Code_Exchange_Failed"
               ? "Tactical Handshake Failed. Your invitation link may have expired or the security environment is mismatched."
-              : error || message}
+              : formError || formMessage}
           </span>
         </div>
       )}
 
       <form
-        action={isSignUp ? signUp : signIn}
-        onSubmit={() => setLoading(true)}
+        onSubmit={handleSubmit}
         className="flex flex-col gap-5"
       >
         <div className="flex flex-col gap-4">

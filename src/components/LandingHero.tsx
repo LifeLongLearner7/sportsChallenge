@@ -69,22 +69,19 @@ function ArenaSignUpPanel({
     const formData = new FormData(e.currentTarget);
 
     try {
-      // signUp is a server action — call it directly
-      await signUp(formData);
-      // If signUp redirects, this won't run; if it doesn't redirect (e.g. error path),
-      // we catch the redirect error thrown by Next.js.
+      const res = await signUp(formData);
+      if (res?.error) {
+        setStatus("error");
+        setErrorMsg(res.error);
+      } else if (res?.message) {
+        setStatus("success");
+      }
     } catch (err: any) {
-      // Next.js server action redirects throw a special NEXT_REDIRECT error
       if (err?.digest?.startsWith("NEXT_REDIRECT")) {
-        const url = err.digest.split(";")[2] || "/";
-        if (url.includes("message=")) {
-          // Success — email sent
-          setStatus("success");
-        } else if (url.includes("error=")) {
-          const msg = decodeURIComponent(url.split("error=")[1]?.split("#")[0] || "Registration failed.");
-          setStatus("error");
-          setErrorMsg(msg);
-        }
+        // Redirecting, don't show error. 
+        // If it was a success redirect, it means they are bypassing email confirmation
+        // But since we returned { message } above, this would only happen if we use redirect("/dashboard")
+        setStatus("success");
       } else {
         setStatus("error");
         setErrorMsg("Something went wrong. Please try again.");

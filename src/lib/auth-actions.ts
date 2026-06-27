@@ -119,7 +119,7 @@ export async function signUp(formData: FormData) {
   // ── Server-side validation ────────────────────────────────────────────────
   const complexityError = validatePasswordComplexity(password);
   if (complexityError) {
-    return redirect(`/?error=${encodeURIComponent(complexityError)}#auth`);
+    return { error: complexityError };
   }
 
   const supabase = await createClient();
@@ -135,7 +135,7 @@ export async function signUp(formData: FormData) {
   });
 
   if (error) {
-    return redirect(`/?error=${encodeURIComponent(mapAuthError(error.message))}#auth`);
+    return { error: mapAuthError(error.message) };
   }
 
   // Email confirmation is pending — pre-create the profile row so the user
@@ -168,9 +168,7 @@ export async function signUp(formData: FormData) {
 
   // If Supabase is configured to require email confirmation, session will be null
   if (data?.user && !data?.session) {
-    return redirect(
-      `/?message=${encodeURIComponent("📬 Tactical link dispatched! Check your inbox and click the link to activate your Arena identity.")}#auth`
-    );
+    return { message: "📬 Tactical link dispatched! Check your inbox and click the link to activate your Arena identity." };
   }
 
   return redirect("/dashboard");
@@ -187,7 +185,7 @@ export async function signIn(formData: FormData) {
   });
 
   if (error) {
-    return redirect(`/?error=${encodeURIComponent(mapAuthError(error.message))}#auth`);
+    return { error: mapAuthError(error.message) };
   }
 
   return redirect("/dashboard");
