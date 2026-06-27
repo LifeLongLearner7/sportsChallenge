@@ -419,7 +419,7 @@ export const getLeaderboardBase = unstable_cache(
 );
 
 // We need to wrap getLeaderboard to inject the tournament into the cache key manually
-export const getLeaderboard = (tournament = "fifa_wc_2026", limit = 10) => {
+export const getLeaderboard = async (tournament = "fifa_wc_2026", limit = 10) => {
   const fetcher = unstable_cache(
     async () => getLeaderboardBase(tournament, limit),
     [`leaderboard-list-${tournament}`],
@@ -450,7 +450,7 @@ export const getUserRankBase = unstable_cache(
   }
 );
 
-export const getUserRank = (userId: string, tournament = "fifa_wc_2026") => {
+export const getUserRank = async (userId: string, tournament = "fifa_wc_2026") => {
   const fetcher = unstable_cache(
     async () => getUserRankBase(userId, tournament),
     [`user-rank-${userId}-${tournament}`],
