@@ -121,16 +121,14 @@ export async function syncFifaRegistry() {
   console.log(`FIFA Sync: Resynchronizing FIFA World Cup ${FIFA_SEASON} Registry...`);
 
   try {
-    // Step 0: Nuclear Reset for FIFA series
-    await supabase.from("external_fixtures").delete().eq("series_id", FIFA_SERIES_KEY);
-
     // Step 1: Fetch all fixtures from API-Football
     let externalFixtures = await fetchAllFifaFixtures();
     if (!externalFixtures || externalFixtures.length === 0) {
       throw new Error("No API fixtures returned from football-data.org. Registry sync aborted.");
     }
 
-    // Step 2: Insert all external fixtures into the registry
+    // Step 2: Safely Upsert all external fixtures into the registry
+    // This updates the dates and names without wiping existing match_id mappings
     for (const ef of externalFixtures) {
       await supabase.from("external_fixtures").upsert({
         external_id: String(ef.fixture.id),
@@ -146,15 +144,28 @@ export async function syncFifaRegistry() {
       .from("matches")
       .select("id, team_a, team_b, match_time")
       .eq("sport", "football")
+      .eq("tournament", "fifa_wc_2026")
       .order("match_time", { ascending: true });
 
     if (!internalMatches) return { success: false, reason: "No internal football matches found." };
 
-    let linkedCount = 0;
-    const usedExternalIds = new Set<string>();
+    // Fetch existing mappings to avoid re-linking or stealing links
+    const { data: linkedFixtures } = await supabase
+      .from("external_fixtures")
+      .select("match_id, external_id")
+      .eq("series_id", FIFA_SERIES_KEY)
+      .not("match_id", "is", null);
 
-    // Step 4: Greedy identity alignment
-    for (const match of internalMatches) {
+    const linkedMatchIds = new Set(linkedFixtures?.map(f => f.match_id) || []);
+    const linkedExternalIds = new Set(linkedFixtures?.map(f => f.external_id) || []);
+
+    const unlinkedInternal = internalMatches.filter(m => !linkedMatchIds.has(m.id));
+    
+    let linkedCount = 0;
+    const usedExternalIds = new Set<string>(linkedExternalIds);
+
+    // Step 4: Greedy identity alignment (ONLY for unmapped matches)
+    for (const match of unlinkedInternal) {
       const aliasesA = [match.team_a, ...(FIFA_TEAM_MAPPINGS[match.team_a] || [])].map((a) => a.toLowerCase());
       const aliasesB = [match.team_b, ...(FIFA_TEAM_MAPPINGS[match.team_b] || [])].map((b) => b.toLowerCase());
 
