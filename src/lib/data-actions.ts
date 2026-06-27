@@ -380,7 +380,7 @@ export const getTopPredictor = unstable_cache(
 );
 
 
-export const getLeaderboard = unstable_cache(
+export const getLeaderboardBase = unstable_cache(
   async (tournament = "FIFA World Cup", limit = 10) => {
     // If we want a truly global lifetime leaderboard, we could pass tournament = 'Global'
     // but the user requested distinct tournaments.
@@ -414,11 +414,21 @@ export const getLeaderboard = unstable_cache(
       is_admin: row.profiles?.is_admin,
     })) as Profile[];
   },
-  ["leaderboard-list-tournament"], // Note: Next.js cache tags can't dynamically depend on arguments inside unstable_cache key array if they are not explicitly passed in the wrapper, but unstable_cache uses the arguments automatically for the cache key.
+  ["leaderboard-list-tournament"], 
   { revalidate: 1800 }
 );
 
-export const getUserRank = unstable_cache(
+// We need to wrap getLeaderboard to inject the tournament into the cache key manually
+export const getLeaderboard = (tournament = "FIFA World Cup", limit = 10) => {
+  const fetcher = unstable_cache(
+    async () => getLeaderboardBase(tournament, limit),
+    [`leaderboard-list-${tournament}`],
+    { revalidate: 1800, tags: [`leaderboard-list-${tournament}`] }
+  );
+  return fetcher();
+};
+
+export const getUserRankBase = unstable_cache(
   async (userId: string, tournament = "FIFA World Cup") => {
     const { data: userScore } = await staticSupabase
       .from("tournament_scores")
@@ -437,10 +447,17 @@ export const getUserRank = unstable_cache(
 
     if (error) return 0;
     return (count || 0) + 1;
-  },
-  ["user-rank-tournament"],
-  { revalidate: 1800 } 
+  }
 );
+
+export const getUserRank = (userId: string, tournament = "FIFA World Cup") => {
+  const fetcher = unstable_cache(
+    async () => getUserRankBase(userId, tournament),
+    [`user-rank-${userId}-${tournament}`],
+    { revalidate: 1800 }
+  );
+  return fetcher();
+};
 
 // Arena Data Actions
 export const getCompletedMatches = unstable_cache(
