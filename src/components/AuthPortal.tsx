@@ -210,19 +210,19 @@ function AuthForm({
         <div className="flex flex-col gap-4">
           {/* Email */}
           <div className="relative group">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1 mb-2 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1 mb-2 block">
               Tactical ID (Email)
             </label>
             <div className="relative">
               <input
                 name="email"
                 required
-                className="w-full bg-black/40 border-b-2 border-white/5 focus:border-primary focus:ring-0 text-white placeholder:text-slate-700 font-bold transition-all py-3 pl-10 outline-none"
+                className="w-full bg-black/60 border-b-2 border-white/10 focus:border-primary focus:bg-black/80 focus:ring-0 text-white placeholder:text-slate-500 font-bold transition-all py-3 pl-10 outline-none"
                 placeholder="strategist@arena.com"
                 type="email"
               />
               <Mail
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-primary opacity-70 group-focus-within:opacity-100 transition-all"
                 size={16}
               />
             </div>
@@ -230,7 +230,7 @@ function AuthForm({
 
           {/* Password */}
           <div className="relative group">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1 mb-2 block">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1 mb-2 block">
               Security Key
             </label>
             <div className="relative">
@@ -239,12 +239,12 @@ function AuthForm({
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-black/40 border-b-2 border-white/5 focus:border-secondary focus:ring-0 text-white placeholder:text-slate-700 font-bold transition-all py-3 pl-10 pr-10 outline-none"
+                className="w-full bg-black/60 border-b-2 border-white/10 focus:border-secondary focus:bg-black/80 focus:ring-0 text-white placeholder:text-slate-500 font-bold transition-all py-3 pl-10 pr-10 outline-none"
                 placeholder="••••••••"
                 type={showPassword ? "text" : "password"}
               />
               <Lock
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-secondary transition-colors"
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-secondary opacity-70 group-focus-within:opacity-100 transition-all"
                 size={16}
               />
               <button

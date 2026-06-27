@@ -171,7 +171,7 @@ function ArenaSignUpPanel({
 
               {/* Email */}
               <div className="relative group">
-                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-1.5 block">
+                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 mb-1.5 block">
                   Tactical ID (Email)
                 </label>
                 <div className="relative">
@@ -180,18 +180,18 @@ function ArenaSignUpPanel({
                     type="email"
                     required
                     placeholder="strategist@arena.com"
-                    className="w-full bg-black/40 border border-white/5 focus:border-primary/50 rounded-lg text-white placeholder:text-slate-700 text-xs font-bold transition-all py-2.5 pl-9 pr-3 outline-none focus:bg-black/60"
+                    className="w-full bg-black/60 border border-white/10 focus:border-primary/50 rounded-lg text-white placeholder:text-slate-500 text-xs font-bold transition-all py-2.5 pl-9 pr-3 outline-none focus:bg-black/80"
                   />
                   <Mail
                     size={13}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-primary transition-colors"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-primary opacity-70 group-focus-within:opacity-100 transition-all"
                   />
                 </div>
               </div>
 
               {/* Password */}
               <div className="relative group">
-                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-1.5 block">
+                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 mb-1.5 block">
                   Security Key
                 </label>
                 <div className="relative">
@@ -202,11 +202,11 @@ function ArenaSignUpPanel({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Min 6 chars, uppercase + number"
-                    className="w-full bg-black/40 border border-white/5 focus:border-secondary/50 rounded-lg text-white placeholder:text-slate-700 text-xs font-bold transition-all py-2.5 pl-9 pr-9 outline-none focus:bg-black/60"
+                    className="w-full bg-black/60 border border-white/10 focus:border-secondary/50 rounded-lg text-white placeholder:text-slate-500 text-xs font-bold transition-all py-2.5 pl-9 pr-9 outline-none focus:bg-black/80"
                   />
                   <Lock
                     size={13}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-secondary transition-colors"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary opacity-70 group-focus-within:opacity-100 transition-all"
                   />
                   <button
                     type="button"
