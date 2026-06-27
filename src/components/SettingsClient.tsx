@@ -56,11 +56,7 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
       setSaveSuccess(true);
       setTimeout(() => {
         setSaveSuccess(false);
-        if (isOnboarding) {
-          router.push("/dashboard");
-        } else {
-          router.refresh();
-        }
+        router.refresh();
       }, 1500);
     } catch (error) {
       console.error("Save failed:", error);

@@ -30,6 +30,7 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
     : navItems;
 
   const isLockdown = profile && profile.onboarding_completed === false;
+  const hasAccess = profile && profile.onboarding_completed;
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 bg-slate-950/60 backdrop-blur-xl border-b border-cyan-500/15 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
@@ -44,7 +45,7 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
             </span>
           </Link>
           
-          {!isLockdown && (
+          {hasAccess && (
             <div className="hidden md:flex gap-6 font-headline tracking-tight font-bold text-sm uppercase">
               {items.map((item) => (
                 <Link
@@ -118,7 +119,7 @@ export default function Navbar({ isAdmin, profile }: { isAdmin?: boolean, profil
         </div>
       </div>
 
-      {mobileMenuOpen && !isLockdown && (
+      {mobileMenuOpen && hasAccess && (
         <div className="md:hidden absolute top-full left-0 w-full bg-slate-950/95 backdrop-blur-3xl border-b border-cyan-500/15 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col pt-2 pb-6 px-6 gap-4 animate-in slide-in-from-top-2 duration-200">
           <div className="flex flex-col gap-2 font-headline tracking-tight font-bold text-lg uppercase border-b border-white/5 pb-4">
             {items.map((item) => {

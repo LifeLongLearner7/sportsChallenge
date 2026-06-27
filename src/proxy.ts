@@ -21,7 +21,7 @@ import { Redis } from "@upstash/redis";
  *   — /api/auth/**  : Excluded — the auth callback must be reachable
  */
 
-const PROTECTED_ROUTES = ["/dashboard", "/arena", "/leaderboard", "/profile"];
+const PROTECTED_ROUTES = ["/dashboard", "/arena", "/leaderboard", "/profile", "/rules", "/groups"];
 const ADMIN_ROUTES = ["/admin"];
 const AUTH_ROUTE = "/";
 
