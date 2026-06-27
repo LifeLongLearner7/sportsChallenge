@@ -20,9 +20,10 @@ export const metadata: Metadata = {
 export default async function LeaderboardPage({
   searchParams,
 }: {
-  searchParams?: { tournament?: string };
+  searchParams?: Promise<{ tournament?: string }>;
 }) {
-  const tournament = searchParams?.tournament || "fifa_wc_2026";
+  const resolvedParams = await searchParams;
+  const tournament = resolvedParams?.tournament || "fifa_wc_2026";
   
   // FAST PATH: Shell + Navbar + Profile
   const profile = await getUserProfile();
