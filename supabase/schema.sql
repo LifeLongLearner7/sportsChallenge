@@ -206,3 +206,23 @@ CREATE TABLE external_fixtures (
 
 CREATE POLICY "Public read access for external_fixtures" ON external_fixtures FOR SELECT USING (true);
 ALTER TABLE external_fixtures ENABLE ROW LEVEL SECURITY;
+
+-- ── PUBLIC SELF-REGISTRATION SUPPORT (v6.10) ─────────────────────────────────
+-- Added to support the new self-registration flow where the server action
+-- pre-creates a profile row (via service role) immediately after supabase.auth.signUp().
+
+-- Allow service role to insert profile rows for newly registered users.
+-- NOTE: Since auth-actions.ts uses the service client (which bypasses RLS),
+-- this policy is primarily for documentation and future tooling compatibility.
+CREATE POLICY "Service can insert profiles" ON profiles FOR INSERT WITH CHECK (true);
+
+
+-- ── EXISTING USER SAFETY NET ──────────────────────────────────────────────────
+-- Run this ONE TIME in the Supabase SQL Editor BEFORE enabling the
+-- "Confirm email" toggle in Authentication → Settings.
+-- This ensures all admin-created users are not locked out.
+--
+-- UPDATE auth.users
+-- SET email_confirmed_at = NOW()
+-- WHERE email_confirmed_at IS NULL;
+

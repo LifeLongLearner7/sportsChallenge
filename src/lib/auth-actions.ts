@@ -81,33 +81,102 @@ export async function createServiceClient() {
   );
 }
 
+// ── Password complexity rule ─────────────────────────────────────────────────
+// At least 6 chars, 1 uppercase letter, and 1 number or symbol.
+function validatePasswordComplexity(password: string): string | null {
+  if (password.length < 6)
+    return "Security key must be at least 6 characters.";
+  if (!/[A-Z]/.test(password))
+    return "Security key must contain at least one uppercase letter.";
+  if (!/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password))
+    return "Security key must contain at least one number or symbol.";
+  return null;
+}
+
+// ── Supabase → themed error mapper ───────────────────────────────────────────
+function mapAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("user already registered") || m.includes("already been registered"))
+    return "This Tactical ID is already in use. Try signing in instead.";
+  if (m.includes("invalid email"))
+    return "That Tactical ID format is invalid. Check the email address.";
+  if (m.includes("password") && m.includes("short"))
+    return "Security key too short. Minimum 6 characters required.";
+  if (m.includes("email not confirmed") || m.includes("not confirmed"))
+    return "Identity not yet verified. Check your inbox and click the confirmation link before entering the arena.";
+  if (m.includes("invalid login credentials") || m.includes("invalid credentials"))
+    return "Tactical ID or Security Key mismatch. Check your credentials.";
+  if (m.includes("too many requests") || m.includes("rate limit"))
+    return "Too many attempts. Neural firewall engaged. Try again later.";
+  return message;
+}
+
 export async function signUp(formData: FormData) {
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string).trim().toLowerCase();
   const password = formData.get("password") as string;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  // ── Server-side validation ────────────────────────────────────────────────
+  const complexityError = validatePasswordComplexity(password);
+  if (complexityError) {
+    return redirect(`/?error=${encodeURIComponent(complexityError)}#auth`);
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/auth/callback`,
+      // Redirect to the new welcome interstitial after email confirmation
+      emailRedirectTo: `${siteUrl}/auth/confirmed`,
     },
   });
 
   if (error) {
-    return redirect(`/?error=${encodeURIComponent(error.message)}#auth`);
+    return redirect(`/?error=${encodeURIComponent(mapAuthError(error.message))}#auth`);
+  }
+
+  // Email confirmation is pending — pre-create the profile row so the user
+  // exists in the profiles table as soon as they confirm their email.
+  if (data?.user) {
+    try {
+      const adminClient = await createServiceClient();
+      const screenName = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "_");
+
+      // Use upsert to safely handle the rare case where the row already exists
+      await adminClient.from("profiles").upsert(
+        {
+          id: data.user.id,
+          screen_name: screenName,
+          onboarding_completed: false,
+          points: 0,
+          level: 1,
+          accuracy: 0,
+          matches_predicted: 0,
+          is_admin: false,
+          is_ai: false,
+        },
+        { onConflict: "id", ignoreDuplicates: true }
+      );
+    } catch (profileErr) {
+      // Profile pre-creation failing is non-fatal — the callback can create it
+      console.warn("SIGNUP: Profile pre-creation skipped:", profileErr);
+    }
   }
 
   // If Supabase is configured to require email confirmation, session will be null
   if (data?.user && !data?.session) {
-    return redirect(`/?message=${encodeURIComponent("Tactical link sent! Check your inbox to finalize connection.")}#auth`);
+    return redirect(
+      `/?message=${encodeURIComponent("📬 Tactical link dispatched! Check your inbox and click the link to activate your Arena identity.")}#auth`
+    );
   }
 
   return redirect("/dashboard");
 }
 
 export async function signIn(formData: FormData) {
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string).trim().toLowerCase();
   const password = formData.get("password") as string;
   const supabase = await createClient();
 
@@ -117,7 +186,7 @@ export async function signIn(formData: FormData) {
   });
 
   if (error) {
-    return redirect(`/?error=${encodeURIComponent(error.message)}#auth`);
+    return redirect(`/?error=${encodeURIComponent(mapAuthError(error.message))}#auth`);
   }
 
   return redirect("/dashboard");

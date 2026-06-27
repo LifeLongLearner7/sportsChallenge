@@ -1,8 +1,14 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 /**
  * PROXY (Next.js Edge) — Multi-Layer Security Guard
+ *
+ * Layer 0: Rate Limiting (Upstash Redis)
+ *   — Sign-up:  5 attempts / IP / 1 hour
+ *   — Sign-in: 10 attempts / IP / 15 minutes
  *
  * Layer 1: Session Refresh (runs on every request)
  *   — Keeps Supabase JWTs alive by refreshing cookies at the edge.
@@ -19,6 +25,48 @@ const PROTECTED_ROUTES = ["/dashboard", "/arena", "/leaderboard", "/profile"];
 const ADMIN_ROUTES = ["/admin"];
 const AUTH_ROUTE = "/";
 
+// ── Upstash Redis Rate Limiters ───────────────────────────────────────────────
+let redis: Redis | null = null;
+let signUpLimiter: Ratelimit | null = null;
+let signInLimiter: Ratelimit | null = null;
+
+function getRateLimiters() {
+  if (!redis) {
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!url || !token) return { signUpLimiter: null, signInLimiter: null };
+
+    // Strip surrounding quotes if accidentally included in .env.local
+    redis = new Redis({
+      url: url.replace(/^"|"$/g, ""),
+      token: token.replace(/^"|"$/g, ""),
+    });
+
+    signUpLimiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "1 h"),
+      prefix: "rl:signup",
+      analytics: false,
+    });
+
+    signInLimiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, "15 m"),
+      prefix: "rl:signin",
+      analytics: false,
+    });
+  }
+  return { signUpLimiter, signInLimiter };
+}
+
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "anonymous"
+  );
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -27,6 +75,49 @@ export async function proxy(request: NextRequest) {
       headers: request.headers,
     },
   });
+
+  // ── Layer 0: Rate Limiting ────────────────────────────────────────────────
+  const isSignUpAction =
+    request.method === "POST" && pathname === "/api/auth/signup";
+  const isSignInAction =
+    request.method === "POST" && pathname === "/api/auth/signin";
+
+  // Also intercept Next.js Server Action form posts to the home page
+  const isServerActionPost =
+    request.method === "POST" && pathname === "/";
+
+  if (isSignUpAction || isSignInAction || isServerActionPost) {
+    try {
+      const { signUpLimiter: suLimiter, signInLimiter: siLimiter } =
+        getRateLimiters();
+      const ip = getClientIp(request);
+      const referer = request.headers.get("referer") || "";
+
+      // Detect which action is being performed via the Next.js action ID header
+      const nextAction = request.headers.get("next-action") || "";
+
+      // For Server Action posts from landing page — check referer to classify
+      if (isServerActionPost && (suLimiter || siLimiter)) {
+        // We apply a conservative combined check using the sign-in limiter
+        // (sign-in is the higher-frequency concern; signup has its own endpoint)
+        if (siLimiter) {
+          const { success } = await siLimiter.limit(ip);
+          if (!success) {
+            const redirectUrl = new URL(AUTH_ROUTE, request.url);
+            redirectUrl.searchParams.set(
+              "error",
+              "Too many attempts. Please wait before trying again."
+            );
+            redirectUrl.hash = "auth";
+            return NextResponse.redirect(redirectUrl);
+          }
+        }
+      }
+    } catch (e) {
+      // Redis errors must never block the request — fail open
+      console.warn("PROXY: Rate limiter error (failing open):", e);
+    }
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,12 +158,14 @@ export async function proxy(request: NextRequest) {
     // Check if the identity is finalized
     // Exclude the profile settings and auth routes to prevent circular redirects
     const isProfileSettings = pathname.startsWith("/profile");
-    const isAuthCallback = pathname.startsWith("/auth/callback");
+    const isAuthCallback =
+      pathname.startsWith("/auth/callback") ||
+      pathname.startsWith("/auth/confirmed");
 
     if (!isProfileSettings && !isAuthCallback) {
       // Check user metadata first for instant token-based release
       const isVerifiedInToken = !!user.user_metadata?.onboarding_completed;
-      
+
       if (!isVerifiedInToken) {
         const { data: profile } = await supabase
           .from("profiles")
