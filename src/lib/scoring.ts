@@ -374,7 +374,7 @@ export async function systemGlobalAudit() {
   // 1. Fetch all COMPLETED nodes
   const { data: matches } = await supabase
     .from("matches")
-    .select("id, winner, ai_prediction, team_a, team_b")
+    .select("id, winner, ai_prediction, team_a, team_b, tournament")
     .eq("status", "completed")
     .not("winner", "is", null);
 
@@ -467,6 +467,41 @@ export async function systemGlobalAudit() {
         accuracy: Math.round(accuracy * 10) / 10
       })
       .eq("id", userId);
+
+    // --- 5. Rebuild Tournament Scores ---
+    const tournamentMap = new Map<string, any[]>();
+    for (const p of userPredictions) {
+      const match = matches.find(m => m.id === p.match_id);
+      if (match?.tournament) {
+        if (!tournamentMap.has(match.tournament)) tournamentMap.set(match.tournament, []);
+        tournamentMap.get(match.tournament)!.push(p);
+      }
+    }
+
+    for (const [tournament, tPreds] of tournamentMap.entries()) {
+      const tPoints = tPreds.reduce((sum, p) => {
+          const corrected = correctedPredictions.find(cp => cp?.id === p.id);
+          return sum + (corrected?.points_won || 0);
+      }, 0);
+
+      const tCorrect = tPreds.filter(p => {
+          const corrected = correctedPredictions.find(cp => cp?.id === p.id);
+          return (corrected?.points_won || 0) > 0;
+      }).length;
+
+      const tAccuracy = tPreds.length > 0 ? (tCorrect / tPreds.length) * 100 : 0;
+
+      await supabase
+        .from("tournament_scores")
+        .upsert({
+          user_id: userId,
+          tournament: tournament,
+          points: tPoints,
+          matches_predicted: tPreds.length,
+          accuracy: Math.round(tAccuracy * 10) / 10,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id, tournament' });
+    }
   }));
 
   // 6. Match Metric Reconstruction: Aggregating Outfoxed Counts
