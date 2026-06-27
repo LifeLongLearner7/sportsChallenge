@@ -178,10 +178,10 @@ function AuthForm({
     const formData = new FormData(e.currentTarget);
     try {
       const res = isSignUp ? await signUp(formData) : await signIn(formData);
-      if (res?.error) {
-        setFormError(res.error);
-      } else if (res?.message) {
-        setFormMessage(res.message);
+      if ((res as any)?.error) {
+        setFormError((res as any).error);
+      } else if ((res as any)?.message) {
+        setFormMessage((res as any).message);
       }
       // If it successfully redirected, Next.js throws NEXT_REDIRECT which is caught below
     } catch (err: any) {

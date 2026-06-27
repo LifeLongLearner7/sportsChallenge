@@ -70,10 +70,10 @@ function ArenaSignUpPanel({
 
     try {
       const res = await signUp(formData);
-      if (res?.error) {
+      if ((res as any)?.error) {
         setStatus("error");
-        setErrorMsg(res.error);
-      } else if (res?.message) {
+        setErrorMsg((res as any).error);
+      } else if ((res as any)?.message) {
         setStatus("success");
       }
     } catch (err: any) {
