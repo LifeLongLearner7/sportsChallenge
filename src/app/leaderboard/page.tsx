@@ -22,7 +22,7 @@ export default async function LeaderboardPage({
 }: {
   searchParams?: { tournament?: string };
 }) {
-  const tournament = searchParams?.tournament || "FIFA World Cup";
+  const tournament = searchParams?.tournament || "fifa_wc_2026";
   
   // FAST PATH: Shell + Navbar + Profile
   const profile = await getUserProfile();

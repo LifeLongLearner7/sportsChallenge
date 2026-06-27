@@ -381,7 +381,7 @@ export const getTopPredictor = unstable_cache(
 
 
 export const getLeaderboardBase = unstable_cache(
-  async (tournament = "FIFA World Cup", limit = 10) => {
+  async (tournament = "fifa_wc_2026", limit = 10) => {
     // If we want a truly global lifetime leaderboard, we could pass tournament = 'Global'
     // but the user requested distinct tournaments.
     const { data, error } = await staticSupabase
@@ -419,7 +419,7 @@ export const getLeaderboardBase = unstable_cache(
 );
 
 // We need to wrap getLeaderboard to inject the tournament into the cache key manually
-export const getLeaderboard = (tournament = "FIFA World Cup", limit = 10) => {
+export const getLeaderboard = (tournament = "fifa_wc_2026", limit = 10) => {
   const fetcher = unstable_cache(
     async () => getLeaderboardBase(tournament, limit),
     [`leaderboard-list-${tournament}`],
@@ -429,7 +429,7 @@ export const getLeaderboard = (tournament = "FIFA World Cup", limit = 10) => {
 };
 
 export const getUserRankBase = unstable_cache(
-  async (userId: string, tournament = "FIFA World Cup") => {
+  async (userId: string, tournament = "fifa_wc_2026") => {
     const { data: userScore } = await staticSupabase
       .from("tournament_scores")
       .select("points")
@@ -450,7 +450,7 @@ export const getUserRankBase = unstable_cache(
   }
 );
 
-export const getUserRank = (userId: string, tournament = "FIFA World Cup") => {
+export const getUserRank = (userId: string, tournament = "fifa_wc_2026") => {
   const fetcher = unstable_cache(
     async () => getUserRankBase(userId, tournament),
     [`user-rank-${userId}-${tournament}`],

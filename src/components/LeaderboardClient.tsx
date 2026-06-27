@@ -69,7 +69,7 @@ export default function LeaderboardClient({
             }}
             className="bg-black/60 border border-primary/30 text-white font-bold px-6 py-3 rounded-xl appearance-none outline-none focus:border-primary/80 transition-colors backdrop-blur-md cursor-pointer hover:bg-black/80 shadow-[0_0_20px_rgba(129,236,255,0.1)] text-center min-w-[200px]"
           >
-            <option value="FIFA World Cup">⚽ FIFA World Cup</option>
+            <option value="fifa_wc_2026">⚽ FIFA World Cup</option>
             <option value="IPL 2026">🏏 IPL 2026</option>
           </select>
           <div className="absolute right-[calc(50%-80px)] top-1/2 -translate-y-1/2 pointer-events-none text-primary/70">
