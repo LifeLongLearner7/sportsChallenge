@@ -17,7 +17,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function LeaderboardPage() {
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams?: { tournament?: string };
+}) {
+  const tournament = searchParams?.tournament || "FIFA World Cup";
+  
   // FAST PATH: Shell + Navbar + Profile
   const profile = await getUserProfile();
 
@@ -25,16 +31,16 @@ export default async function LeaderboardPage() {
     <>
       <Navbar isAdmin={profile?.is_admin} profile={profile} />
       <Suspense fallback={<DashboardSkeleton />}>
-        <LeaderboardDataWrapper profile={profile} />
+        <LeaderboardDataWrapper profile={profile} tournament={tournament} />
       </Suspense>
     </>
   );
 }
 
-async function LeaderboardDataWrapper({ profile }: { profile: any }) {
+async function LeaderboardDataWrapper({ profile, tournament }: { profile: any, tournament: string }) {
   // STREAMING PATH: Rankings + Stats
   const [leaderboard, stats] = await Promise.all([
-    getLeaderboard(),
+    getLeaderboard(tournament),
     getLeaderboardStats(),
   ]);
 
@@ -42,7 +48,8 @@ async function LeaderboardDataWrapper({ profile }: { profile: any }) {
     <LeaderboardClient 
       initialProfiles={leaderboard} 
       stats={stats}
-      currentUserProfile={profile} 
+      currentUserProfile={profile}
+      activeTournament={tournament}
     />
   );
 }

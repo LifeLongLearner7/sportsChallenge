@@ -78,10 +78,11 @@ export const processAllPredictionsForMatch = async (
 
   const { data: match } = await supabase
     .from("matches")
-    .select("sport")
+    .select("sport, tournament")
     .eq("id", matchId)
     .single();
   const matchSport = match?.sport || "cricket";
+  const matchTournament = match?.tournament || null;
 
   // ── Step 1: Fetch ALL predictions for this match in ONE query ─────────────
   const { data: predictions, error: fetchError } = await supabase
@@ -234,6 +235,53 @@ export const processAllPredictionsForMatch = async (
   } catch (groupErr) {
     // Non-fatal: group scoring failure should not block global scoring
     console.error("Scoring: Group points update failed (non-fatal):", groupErr);
+  }
+
+  // ── Step 5C: Update Tournament-Specific Points ───────────────────────────
+  if (matchTournament) {
+    try {
+      await Promise.all(
+        uniqueUserIds.map(async (userId) => {
+          // Fetch all predictions for this user specifically for matches in this tournament
+          // Need to join matches table to filter by tournament
+          const { data: tournamentPredictions } = await supabase
+            .from("predictions")
+            .select("points_won, matches!inner(tournament)")
+            .eq("user_id", userId)
+            .eq("matches.tournament", matchTournament)
+            .not("points_won", "is", null);
+
+          if (!tournamentPredictions) return;
+
+          const totalPredicted = tournamentPredictions.length;
+          const totalCorrect = tournamentPredictions.filter(
+            (p: any) => (p.points_won || 0) > 0
+          ).length;
+          const totalPoints = tournamentPredictions.reduce(
+            (sum: number, p: any) => sum + (p.points_won || 0),
+            0
+          );
+          const newAccuracy =
+            totalPredicted > 0
+              ? Math.round((totalCorrect / totalPredicted) * 1000) / 10
+              : 0;
+
+          await supabase
+            .from("tournament_scores")
+            .upsert({
+              user_id: userId,
+              tournament: matchTournament,
+              points: totalPoints,
+              matches_predicted: totalPredicted,
+              accuracy: newAccuracy,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id, tournament' });
+        })
+      );
+      console.log(`Scoring: Tournament points updated for ${uniqueUserIds.length} users in ${matchTournament}.`);
+    } catch (tournamentErr) {
+      console.error("Scoring: Tournament points update failed (non-fatal):", tournamentErr);
+    }
   }
 
   // ── Step 6: Calculate and store "Outfoxed" count ─────────────────────────

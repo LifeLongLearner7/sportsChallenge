@@ -381,10 +381,19 @@ export const getTopPredictor = unstable_cache(
 
 
 export const getLeaderboard = unstable_cache(
-  async (limit = 10) => {
+  async (tournament = "FIFA World Cup", limit = 10) => {
+    // If we want a truly global lifetime leaderboard, we could pass tournament = 'Global'
+    // but the user requested distinct tournaments.
     const { data, error } = await staticSupabase
-      .from("profiles")
-      .select("*")
+      .from("tournament_scores")
+      .select(`
+        user_id,
+        points,
+        matches_predicted,
+        accuracy,
+        profiles (screen_name, avatar_url, is_ai, is_admin)
+      `)
+      .eq("tournament", tournament)
       .order("points", { ascending: false })
       .limit(limit);
 
@@ -392,31 +401,44 @@ export const getLeaderboard = unstable_cache(
       console.error("Leaderboard Fetch Error:", error);
       return [];
     }
-    return (data as Profile[]) || [];
+
+    // Map to the expected Profile shape to keep the UI intact
+    return (data || []).map((row: any) => ({
+      id: row.user_id,
+      screen_name: row.profiles?.screen_name,
+      avatar_url: row.profiles?.avatar_url,
+      points: row.points,
+      matches_predicted: row.matches_predicted,
+      accuracy: row.accuracy,
+      is_ai: row.profiles?.is_ai,
+      is_admin: row.profiles?.is_admin,
+    })) as Profile[];
   },
-  ["leaderboard-list"],
+  ["leaderboard-list-tournament"], // Note: Next.js cache tags can't dynamically depend on arguments inside unstable_cache key array if they are not explicitly passed in the wrapper, but unstable_cache uses the arguments automatically for the cache key.
   { revalidate: 1800 }
 );
 
 export const getUserRank = unstable_cache(
-  async (userId: string) => {
-    const { data: userProfile } = await staticSupabase
-      .from("profiles")
+  async (userId: string, tournament = "FIFA World Cup") => {
+    const { data: userScore } = await staticSupabase
+      .from("tournament_scores")
       .select("points")
-      .eq("id", userId)
+      .eq("user_id", userId)
+      .eq("tournament", tournament)
       .single();
 
-    if (!userProfile) return 0;
+    if (!userScore) return 0;
 
     const { count, error } = await staticSupabase
-      .from("profiles")
+      .from("tournament_scores")
       .select("*", { count: 'exact', head: true })
-      .gt("points", userProfile.points || 0);
+      .eq("tournament", tournament)
+      .gt("points", userScore.points || 0);
 
     if (error) return 0;
     return (count || 0) + 1;
   },
-  ["user-rank"],
+  ["user-rank-tournament"],
   { revalidate: 1800 } 
 );
 
