@@ -51,9 +51,17 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
       await updateProfile({
         screen_name: screenName,
         avatar_url: selectedAvatar,
+        ...(isOnboarding ? { onboarding_completed: true } : {}),
       });
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() => {
+        setSaveSuccess(false);
+        if (isOnboarding) {
+          router.push("/dashboard");
+        } else {
+          router.refresh();
+        }
+      }, 1500);
     } catch (error) {
       console.error("Save failed:", error);
     } finally {
