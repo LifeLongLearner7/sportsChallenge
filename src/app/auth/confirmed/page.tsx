@@ -8,84 +8,56 @@ import { ShieldCheck, RefreshCcw, AlertCircle, Zap } from "lucide-react";
 /**
  * /auth/confirmed — Email Confirmation Welcome Interstitial
  *
- * Handles the Supabase confirmation link redirect for self-registered users.
- * Exchanges the PKCE code or session token, then shows a branded welcome screen
- * before redirecting the user to /profile/settings to complete their identity.
+ * By the time the user reaches this page, the PKCE code has already been
+ * exchanged for a session by the server-side /api/auth/callback route handler.
+ * This page simply reads the existing session and shows the welcome screen.
+ * No code exchange happens here.
  */
 export default function ConfirmedPage() {
   const router = useRouter();
   const [status, setStatus] = useState<"syncing" | "success" | "error">("syncing");
-  const [errorMsg, setErrorMsg] = useState("");
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
-    const handleConfirmation = async () => {
-      try {
-        // 1. Handle fragment-based tokens (#access_token=...) — Implicit Flow
-        if (window.location.hash) {
-          const hash = window.location.hash.substring(1);
-          const params = new URLSearchParams(hash);
-          const access_token = params.get("access_token");
-          const refresh_token = params.get("refresh_token");
+    const checkSession = async () => {
+      // Give the session cookie a moment to propagate after the server redirect
+      await new Promise((r) => setTimeout(r, 600));
 
-          if (access_token && refresh_token) {
-            const { error } = await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-            if (error) throw error;
-            setStatus("success");
-            return;
-          }
-        }
-
-        // 2. Handle PKCE code (?code=...) — PKCE Flow (default for email confirmation)
-        const queryParams = new URLSearchParams(window.location.search);
-        const code = queryParams.get("code");
-
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-          setStatus("success");
-          return;
-        }
-
-        // 3. Check for an existing session (already exchanged)
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setStatus("success");
-          return;
-        }
-
-        // 4. Listen for auth state changes (fallback for async token delivery)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
-              setStatus("success");
-              subscription.unsubscribe();
-            }
-          }
-        );
-
-        // Safety timeout
-        setTimeout(() => {
-          setStatus((prev) => {
-            if (prev === "syncing") {
-              setErrorMsg("Confirmation link may have expired.");
-              return "error";
-            }
-            return prev;
-          });
-        }, 15000);
-      } catch (err: any) {
-        console.error("CONFIRMATION_ERROR:", err.message);
-        setStatus("error");
-        setErrorMsg(err.message);
-        setTimeout(() => router.push("/?error=Code_Exchange_Failed#auth"), 3000);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setStatus("success");
+        return;
       }
+
+      // Fallback: listen for the auth state change event
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+            setStatus("success");
+            subscription.unsubscribe();
+          }
+        }
+      );
+
+      // Safety timeout — if no session after 8s, redirect back with error
+      const timeout = setTimeout(() => {
+        setStatus((prev) => {
+          if (prev === "syncing") {
+            subscription.unsubscribe();
+            setTimeout(() => router.push("/?error=Code_Exchange_Failed#auth"), 2000);
+            return "error";
+          }
+          return prev;
+        });
+      }, 8000);
+
+      return () => {
+        clearTimeout(timeout);
+        subscription.unsubscribe();
+      };
     };
 
-    handleConfirmation();
+    checkSession();
   }, [router]);
 
   // Countdown + redirect on success
@@ -246,7 +218,7 @@ export default function ConfirmedPage() {
                   </h1>
                 </div>
                 <p className="text-slate-500 text-xs leading-relaxed font-medium">
-                  {errorMsg || "Confirmation link may have expired or already been used."}{" "}
+                  Confirmation link may have expired or already been used.{" "}
                   Redirecting back to the portal...
                 </p>
               </>

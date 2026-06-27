@@ -128,8 +128,9 @@ export async function signUp(formData: FormData) {
     email,
     password,
     options: {
-      // Redirect to the new welcome interstitial after email confirmation
-      emailRedirectTo: `${siteUrl}/auth/confirmed`,
+      // Route through the server-side callback handler so the PKCE code exchange
+      // happens with full cookie access. The handler then redirects to /auth/confirmed.
+      emailRedirectTo: `${siteUrl}/api/auth/callback?next=/auth/confirmed`,
     },
   });
 
