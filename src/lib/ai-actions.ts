@@ -678,23 +678,26 @@ export async function seedFifaMatches() {
       const venue = f.fixture.venue.city ? `${f.fixture.venue.name}, ${f.fixture.venue.city}` : f.fixture.venue.name;
       const round = f.league.round;
 
-      const { data: existing } = await supabase
-        .from("matches")
-        .select("id")
-        .eq("sport", "football")
-        .eq("tournament", "fifa_wc_2026")
-        .eq("team_a", teamACode)
-        .eq("team_b", teamBCode)
-        .eq("match_time", matchTime)
+      const FIFA_SERIES_KEY = `fifa_wc_${FIFA_SEASON}`;
+
+      // Look up existing match using the unique API fixture ID
+      const { data: linkage } = await supabase
+        .from("external_fixtures")
+        .select("match_id")
+        .eq("external_id", String(f.fixture.id))
         .maybeSingle();
 
       let matchId: string;
 
-      if (existing) {
-        matchId = existing.id;
+      if (linkage?.match_id) {
+        matchId = linkage.match_id;
+        // The match exists, update everything in case it morphed from TBD to resolved teams
         await supabase
           .from("matches")
           .update({
+            team_a: teamACode,
+            team_b: teamBCode,
+            match_time: matchTime,
             venue,
             round,
           })
@@ -723,7 +726,6 @@ export async function seedFifaMatches() {
         seededCount++;
       }
 
-      const FIFA_SERIES_KEY = `fifa_wc_${FIFA_SEASON}`;
       await supabase
         .from("external_fixtures")
         .upsert({
