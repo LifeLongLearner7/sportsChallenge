@@ -309,7 +309,7 @@
 
         <!-- CTA -->
         <div class="cta-wrapper">
-          <a href="{{ .ConfirmationURL }}" class="cta-button" target="_blank">
+          <a href="{{ .SiteURL }}/api/auth/callback?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed" class="cta-button" target="_blank">
             ⚡ &nbsp; Confirm Neural Link
           </a>
         </div>
@@ -327,7 +327,7 @@
         <!-- URL fallback for email clients that block buttons -->
         <p class="url-fallback">
           Button not working? Copy and paste this link into your browser:<br>
-          <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+          <a href="{{ .SiteURL }}/api/auth/callback?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed">{{ .SiteURL }}/api/auth/callback</a>
         </p>
 
       </div>
@@ -338,13 +338,6 @@
           You're receiving this because a Strategist account was created with this email address.<br>
           This is a transactional message — no marketing, no spam.
         </p>
-        <div class="footer-links">
-          <a href="{{ .SiteURL }}/rules">Terms of Engagement</a>
-          <span class="footer-sep">/</span>
-          <a href="{{ .SiteURL }}">Privacy Protocol</a>
-          <span class="footer-sep">/</span>
-          <span style="color: #1a2a3a;">© CYBER-SPORTS ARENA</span>
-        </div>
       </div>
 
     </div>
