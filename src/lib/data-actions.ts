@@ -284,11 +284,12 @@ export async function updateProfile(updates: Partial<Profile>) {
 
   // SECURITY FORTIFICATION (V-01): Strict Whitelist
   // Explicitly pick ONLY user-editable fields.
-  // Prevent modification of 'is_admin', 'points', 'onboarding_completed', etc.
-  const sanitizedUpdates = {
+  // Prevent modification of 'is_admin', 'points', etc.
+  const sanitizedUpdates: Partial<Profile> = {
     screen_name: updates.screen_name,
     full_name: updates.full_name,
     avatar_url: updates.avatar_url,
+    onboarding_completed: updates.onboarding_completed,
   };
 
   // Remove undefined fields to avoid overwriting existing data with NULL
@@ -296,10 +297,22 @@ export async function updateProfile(updates: Partial<Profile>) {
     key => sanitizedUpdates[key as keyof typeof sanitizedUpdates] === undefined && delete sanitizedUpdates[key as keyof typeof sanitizedUpdates]
   );
 
-  const { error } = await supabase
-    .from("profiles")
-    .update(sanitizedUpdates)
-    .eq("id", user.id);
+  let error;
+  if (sanitizedUpdates.onboarding_completed !== undefined) {
+    const { createServiceClient } = await import("./auth-actions");
+    const adminClient = await createServiceClient();
+    const result = await adminClient
+      .from("profiles")
+      .update(sanitizedUpdates)
+      .eq("id", user.id);
+    error = result.error;
+  } else {
+    const result = await supabase
+      .from("profiles")
+      .update(sanitizedUpdates)
+      .eq("id", user.id);
+    error = result.error;
+  }
 
   if (error) throw error;
 
