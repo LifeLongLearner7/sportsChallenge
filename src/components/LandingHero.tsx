@@ -366,7 +366,7 @@ export default function LandingHero({ stats }: LandingHeroProps) {
           transition={{ delay: 0.4 }}
           className="max-w-md text-slate-400 text-lg md:text-xl leading-relaxed font-medium"
         >
-          Experience the high-velocity fusion of T20 energy and futuristic AI precision. Predict outcomes, master the meta, and claim your status.
+          Experience the ultimate fusion of elite sports and futuristic AI precision. Predict match outcomes, outsmart the algorithms, and claim your status.
         </motion.p>
       </div>
 
