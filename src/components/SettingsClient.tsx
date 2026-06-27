@@ -159,22 +159,7 @@ export default function SettingsClient({ profile }: SettingsClientProps) {
                 
                 <div className="flex flex-col gap-3">
                   <button 
-                    onClick={async () => {
-                      setIsSaving(true);
-                      try {
-                        await updateProfile({
-                          screen_name: screenName,
-                          avatar_url: selectedAvatar,
-                          ...(isOnboarding ? { onboarding_completed: true } : {}),
-                        });
-                        setSaveSuccess(true);
-                        setTimeout(() => { setSaveSuccess(false); router.refresh(); }, 2000);
-                      } catch (error) {
-                        console.error("Save failed:", error);
-                      } finally {
-                        setIsSaving(false);
-                      }
-                    }}
+                    onClick={handleSave}
                     disabled={isSaving || !screenName.trim()}
                     className={cn(
                       "w-full py-4 rounded-xl font-black uppercase tracking-[0.15em] text-[11px] flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-lg",
