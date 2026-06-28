@@ -189,7 +189,7 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
   const cn = (...classes: any[]) => classes.filter(Boolean).join(" ");
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-8 font-sans selection:bg-purple-500/30">
+    <div className="min-h-screen bg-[#050505] text-white p-4 md:p-8 font-sans selection:bg-purple-500/30">
       {/* HUD Header */}
       <header className="max-w-7xl mx-auto mb-8 border-b border-white/5 pb-8">
         <div className="flex items-center justify-between mb-6">
@@ -203,9 +203,9 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
 
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
-            <h1 className="text-4xl font-black tracking-tighter bg-gradient-to-r from-white via-white/80 to-white/40 bg-clip-text text-transparent flex items-center gap-3">
+            <h1 className="text-2xl md:text-4xl font-black tracking-tighter bg-gradient-to-r from-white via-white/80 to-white/40 bg-clip-text text-transparent flex items-center gap-3">
               <ShieldAlert className="w-10 h-10 text-red-500 animate-pulse" />
               TACTICAL COMMAND CENTER
             </h1>
@@ -214,7 +214,7 @@ export default function AdminMatchesClient({ initialMatches }: { initialMatches:
             </p>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-3 md:gap-6">
 
           {statusMessage && (
             <div className={`text-[10px] font-mono uppercase tracking-[0.2em] px-4 py-2 border rounded-lg animate-in fade-in slide-in-from-right-2 ${
