@@ -714,27 +714,64 @@ export async function seedFifaMatches() {
           })
           .eq("id", matchId);
       } else {
-        const { data: inserted, error: insertError } = await supabase
+        // Fallback: Check if there's an existing match with the exact same teams and time
+        const { data: existingMatch } = await supabase
           .from("matches")
-          .insert({
-            sport: "football",
-            tournament: "fifa_wc_2026",
-            team_a: teamACode,
-            team_b: teamBCode,
-            match_time: matchTime,
-            venue,
-            round,
-            status: "upcoming"
-          })
           .select("id")
-          .single();
+          .eq("sport", "football")
+          .eq("tournament", "fifa_wc_2026")
+          .eq("team_a", teamACode)
+          .eq("team_b", teamBCode)
+          .eq("match_time", matchTime)
+          .maybeSingle();
 
-        if (insertError || !inserted) {
-          console.error("FIFA Seeder: Failed to insert match:", insertError);
-          continue;
+        let reusedMatchId = null;
+        if (existingMatch) {
+          // Check if this existing match is already linked to another external fixture
+          const { data: existingLink } = await supabase
+            .from("external_fixtures")
+            .select("external_id")
+            .eq("match_id", existingMatch.id)
+            .maybeSingle();
+            
+          if (!existingLink) {
+            reusedMatchId = existingMatch.id;
+          }
         }
-        matchId = inserted.id;
-        seededCount++;
+
+        if (reusedMatchId) {
+          matchId = reusedMatchId;
+          // Update the reused match
+          await supabase
+            .from("matches")
+            .update({
+              venue,
+              round,
+            })
+            .eq("id", matchId);
+        } else {
+          const { data: inserted, error: insertError } = await supabase
+            .from("matches")
+            .insert({
+              sport: "football",
+              tournament: "fifa_wc_2026",
+              team_a: teamACode,
+              team_b: teamBCode,
+              match_time: matchTime,
+              venue,
+              round,
+              status: "upcoming"
+            })
+            .select("id")
+            .single();
+
+          if (insertError || !inserted) {
+            console.error("FIFA Seeder: Failed to insert match:", insertError);
+            continue;
+          }
+          matchId = inserted.id;
+          seededCount++;
+        }
       }
 
       await supabase
